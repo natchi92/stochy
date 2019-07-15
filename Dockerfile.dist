@@ -1,0 +1,5 @@
+FROM ubuntu:19.04
+ADD build/stochy-1.0.0/ /StocHy/
+RUN apt-get -y update
+RUN chmod +x /StocHy/get_dep.dist.sh
+RUN /StocHy/get_dep.dist.sh

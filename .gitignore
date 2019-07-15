@@ -1,0 +1,6 @@
+.vscode/
+build/
+*.o
+*.swp
+session
+armadillo/

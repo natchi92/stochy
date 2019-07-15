@@ -1,0 +1,6 @@
+[submodule "lib/nlopt"]
+	path = lib/nlopt
+	url = https://github.com/stevengj/nlopt.git
+[submodule "lib/cubature"]
+	path = lib/cubature
+	url = https://github.com/stevengj/cubature.git

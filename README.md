@@ -47,6 +47,11 @@ We provide four examples as part of StocHy. For each example we have a dedicated
 
 Simply create your own Case_study.cpp file within /src/case_studies/. This follows the same structure as described within the TACAS paper, however we don't need to modify the main file each time. We now create an individual case study and call the case study we want to run. 
 
+# Connecting with the individual libraries 
+All the src files for the individual libraries can be found within src/ . These are built as individual libraries and one can simply use any of the libraries as needed for further extensions.
+    (1) shs - contains the general model description for constructing a shs based on the input model structure; together with the simulator for shs.
+    (2) FAUST - library for performing abstractions via MDPs
+    (3) bmdp - library for performing abstractions via IMDPs 
 
 # Benchmark for stochastic processes
 

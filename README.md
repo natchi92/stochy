@@ -13,34 +13,19 @@ The tools allows to described discrete time shs by parsing well known state spac
 
 # Installation, documentation, and examples
 
-# Local dependencies (included with with source or as git submodules)
-
-    BMDP-Synthesis, nlopt, cubature
-
-# External dependencies 
-
-    boost, matio, armadillo, ginac,
-
-All the external dependencies can be automatically installed using 'get_dep.dev.sh' 
-(for building from source) and 'get_dep.dist.sh' (for packaged distributions)
-
-# Other dependencies assumed to be installed on the system
-
-    python2.7, numpy, matplotlib 
-
-Additionally, for build from source the follow are assumed to be available
-
-    cmake, git, g++
-
-# Installation
-
-    Install the necessary dependencies by running the file 'get_dep.h'
-    Clone the StocHy repository
-    Run the 'run.sh' file (found within the make directory) which will automatically build and compile stochy
+# Development version 
+  (1)  Obtain required dependencies by running get_dep.dev.sh 
+  (2)  Use build_debug.sh to run StocHy in development mode
+  
+# Release version
+  (1)  Obtain required dependencies by running get_dep.dist.sh 
+  (2)  Use build_release.sh to run StocHy 
+  
+ Unless opting to extend or connect StocHy with your own tools, it is advised to opt to install the release version. 
 
 # Docker system
 
-To facilitate sharing of StocHy between different operating environments we provide a docker container containing StocHy. This is called StocHyDocker.zip.
+To facilitate sharing of StocHy between different operating environments we provide a docker container containing StocHy. Details are found within the Docker folder.
 
 # Wiki
 
@@ -60,7 +45,8 @@ We provide four examples as part of StocHy. For each example we have a dedicated
 
 # Running your own models
 
-Simply modify the Main.cpp file to contain your model description and task selection. Then build and compile StocHy via ./run.sh within the make folder.
+Simply create your own Case_study.cpp file within /src/case_studies/. This follows the same structure as described within the TACAS paper, however we don't need to modify the main file each time. We now create an individual case study and call the case study we want to run. 
+
 
 # Benchmark for stochastic processes
 

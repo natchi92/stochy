@@ -59,7 +59,7 @@ All the src files for the individual libraries can be found within src/ . These 
 We also provide a set of benchmarks for cyber-physical systems endowed with stochasticity (noise). These benchmarks serve as a means of constructing further models and test different verification/ synthesis
 algorithms against models with different complexities.
 
-The benchmarks can be found [here](https://gitlab.com/natchi92/BASBenchmarks), while the accompanying research paper describing these benchmarks can found is given [here](https://gitlab.com/natchi92/BASBenchmarks/blob/master/bench_ADHS.pdf)
+The benchmarks can be found [here](https://gitlab.com/natchi92/BASBenchmarks), while the accompanying research paper describing these benchmarks can found is given [here](https://gitlab.com/natchi92/BASBenchmarks/blob/master/bench_ADHS.pdf).
 
 # Contributions
 

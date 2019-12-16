@@ -14,8 +14,9 @@ The tools allows to described discrete time shs by parsing well known state spac
 # Installation, documentation, and examples
 
 # Development version 
-  (1)  Obtain required dependencies by running get_dep.dev.sh 
-  (2)  Use build_debug.sh to run StocHy in development mode
+  (1)  Run: git submodule update --init --recursive
+  (2)  Obtain required dependencies by running get_dep.dev.sh 
+  (3)  Use build_debug.sh to run StocHy in development mode
   
 # Release version
   (1)  Obtain required dependencies by running get_dep.dist.sh 

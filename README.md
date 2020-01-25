@@ -24,6 +24,8 @@ The tools allows to described discrete time shs by parsing well known state spac
   
  Unless opting to extend or connect StocHy with your own tools, it is advised to opt to install the release version. 
 
+All the built and compiled binary files are then found within /build/bin. One can done run the corresponding binary files by using ./stochy_XX where XX is the corresponding model name.
+
 # Docker system
 
 To facilitate sharing of StocHy between different operating environments we provide a docker container containing StocHy. Details are found within the Docker folder.

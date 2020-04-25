@@ -18,63 +18,92 @@ typedef arma::mat (*ssmodels_func)(unsigned n, const double *x, void *fdata);
 
 typedef ssmodels_func func; // nlopt::func synoynm
 
-class ssmodels_t {
-public:
-  int x_dim; // Dimension of state spaces i.e. number of continuous var
-  int u_dim; // Dimension of control input
-  int d_dim; // Dimension of disturbances vector - Note all dimensions can be
+typedef emptyMatrix = arma::zeros<arma::mat>(1,1);
+
+class ssmodels_t
+{
+  public:
+  ssmodels_t() : xDim{0}, uDim{0}, dDim{0}, deltaT{-1}, A{}, B{}, F{}, Q{}, N{}, Sigma{} {}
+  ssmodels_t(const int _xDim, const int uDim, const int dDim) noexcept : xDim{_xDim}, uDim{_uDim}, dDim{_dDim}, deltaT{-1}, A{}, B{},F{}, Q{}, N{}, Sigma{} {}
+
+  // Model type : x_k+1 = Ax_k + Bu_k + N(x_k (.) u_k)+ F*Norm(0, Sigma) + Q  : Bilinear
+  ssmodels_t(const int _deltaT, const arma::mat _A, const arma::mat _B, arma::mat _N, const arma::mat _F, const arma::mat _Q, const arma::mat _Sigma) noexpect:
+            xDim{_A.n_rows}, uDim{_B.n_rows}, dDim{_D.n_rows}, deltaT{_deltaT}, A{_A}, B{_B}, F{_F}, Q{_Q}, N{_N}, Sigma{_Sigma} {}
+
+  // Model type : x_k+1 = Ax_k + Bu_k + F*Norm(0, Sigma) + Q  : Bilinear
+  ssmodels_t(int _deltaT, arma::mat _A, arma::mat _B, arma::mat _F, arma::mat _Q, arma::mat _Sigma)
+  {
+    return ssmodels_t(_deltaT, _A, _B, _F, arma::zeros<arma::matrix>(1,1).reset(), _Q, _Sigma);
+  };
+
+  // Model type : x_k+1 = Ax_k + Bu_k + F*Norm(0, Sigma) : Bilinear
+  ssmodels_t(int _deltaT, arma::mat _A, arma::mat _B, arma::mat _F, arma::mat _Sigma)
+  {
+    return ssmodels_t(_deltaT, _A, _B, _F, arma::zeros<arma::matrix>(1,1).reset(), arma::zeros<arma::matrix>(1,1).reset(), _Sigma);
+  };
+
+  // Model type : x_k+1 = Ax_k + F*Norm(0, Sigma) : Bilinear
+  ssmodels_t(int _deltaT, arma::mat _A, arma::mat _F, arma::mat _Sigma)
+  {
+    return ssmodels_t(_deltaT, _A, arma::zeros<arma::matrix>(1,1).reset(), _F, arma::zeros<arma::matrix>(1,1).reset(), arma::zeros<arma::matrix>(1,1).reset(), _Sigma);
+  };
+
+  // Model type : x_k+1 = Ax_k + F*Norm(0, Sigma) + Q : Bilinear
+  ssmodels_t(int _deltaT, arma::mat _A, arma::mat _F, arma::mat _Q, arma::mat _Sigma)
+  {
+    return ssmodels_t(_deltaT, _A, arma::zeros<arma::matrix>(1,1).reset(), _F, arma::zeros<arma::matrix>(1,1).reset(), _Q, _Sigma);
+  };
+
+  // modelialise state space model based on data from input Matlab file for MDP abstraction based abstractions
+  void obtainSSfromMat(const char *fn, ssmodels_t &model , int currentMode);
+  void obtainSSfromMat(const char *fn, ssmodels_t &model)
+  {
+    return obtainSSfromMat(fn, model, 0);
+  };
+
+  // modelialise state space model based on data from input Matlab file for IMDB based abstractions
+  void obtainIMDPfromMat(const char *fn, ssmodels_t &model, int currentMode); //TODO(ncauchi) replace all BMDP to IMDP
+
+  /// Update ssmodel based on input data read from MATLAB file for MDP abstraction based abstractions
+  // 0. Variable name = "Variable + mode"
+  // 1. populate state space based on variable name
+  // 2. Check if dimensions match
+  void populateStateSpaceModelForMDP(matvar_t &content, int currentMode);
+  void populateStateSpaceModelForMDP(matvar_t &content)
+  {
+    return populateStateSpaceModelForMDP(model, content 0);
+  };
+
+  /// Update ssmodel based on input data read from MATLAB file for IMDP based abstractions
+  // 0. Variable name = "Variable + mode"
+  // 1. populate state space based on variable name
+  // 2. Check if dimensions match
+  void populateStateSpaceModelForIMDP(matvar_t &content, int currentMode);
+  // Fill state space matrices from corresponding variable in MATLAB file
+  const arma::mat fillMatrix(matvar_t &content);
+  // Read contents from MATLAB file of type cell,  this is used for Tq when in hybrid mode
+  const std::string readCells(matvar_t &content);
+  void checkModel(ssmodels_t &model);
+
+  const arma::mat getDeterministicPartOfModelUpdate(const arma::mat x_k, const arma::mat u_k, const arma::mat d_k);
+  const arma::mat getDeterministicPartOfModelUpdate(const arma::mat x_k, const arma::mat z_k);
+  const arma::mat getDeterministicPartOfModelUpdate(const arma::mat x_k);
+  const arma::mat ssmodels_t::getStochasticModelUpdate(const arma::mat x_k, const arma::mat u_k, const arma::mat d_k);
+private:
+  int xDim; // Dimension of state spaces i.e. number of continuous var
+  int uDim; // Dimension of control input
+  int dDim; // Dimension of disturbances vector - Note all dimensions can be
              // either input or computed
-  double delta_t; // If <= 0 then in CT model
+
+  double deltaT; // If <= 0 then in CT model
   arma::mat A;
   arma::mat B;
-  arma::mat C;
-  arma::mat F; // F for disturbances of in case of switching systems to
-               // correspond to the G function in Gw[k]
+  arma::mat F; // F for disturbances of in case of switching systems to correspond to the G function in Gw[k]
   arma::mat N; // N for bilinear models
   arma::mat Q;
-  arma::mat sigma; // If Zeros then deterministic models
-public:
-  ssmodels_t();
-  ssmodels_t(int x_d, int u_d, int d_d);
-  ssmodels_t(int x_d, arma::mat Am, arma::mat Sm);
-  ssmodels_t(arma::mat Am, arma::mat Sm);
-  ssmodels_t(arma::mat Am, arma::mat Qm, arma::mat Sm);
-  ssmodels_t(arma::mat Am, arma::mat Bm, arma::mat Qm, arma::mat Sm);
-  ssmodels_t(int x_d, arma::mat Am, arma::mat Fm, arma::mat Sm, int sig);
-  ssmodels_t(int x_d, arma::mat Am, arma::mat Bm, arma::mat Sm);
-  ssmodels_t(int dt, arma::mat Am, arma::mat Bm, arma::mat Nm, arma::mat Sm);
-  ssmodels_t(int x_d, int u_d, int d_d, double d_t, arma::mat Am, arma::mat Bm,
-             arma::mat Cm, arma::mat Fm, arma::mat Qm, arma::mat Sm);
-  ssmodels_t(double d_t, arma::mat Am, arma::mat Bm, arma::mat Cm, arma::mat Fm,
-             arma::mat Qm, arma::mat Sm);
-  ssmodels_t(double d_t,  arma::mat Am, arma::mat Bm, arma::mat Fm,arma::mat Qm, arma::mat Sm);
-  ssmodels_t(arma::mat Am, arma::mat Bm, arma::mat Nm, arma::mat Qm, arma::mat Sm);
-  void obtainSSfromMat(const char *fn, ssmodels_t &init);
-  void obtainSSfromMat(const char *fn, ssmodels_t &init, int curMode);
-  void obtainBMDPfromMat(const char *fn, ssmodels_t &init, int curMode);
-  void populate(ssmodels_t &init, matvar_t &content);
-  void populate(ssmodels_t &init, matvar_t &content, int curMode);
-  void populateBMDP(ssmodels_t &init, matvar_t &content, int curMode);
-  int checkDimFields(int dim, arma::mat mt);
-  void checkModel(ssmodels_t &init);
-  int checkMatrices(int size, int rows, int cols);
-  arma::mat fillMatrix(ssmodels_t &init, matvar_t &content);
-  std::string readCells(matvar_t &content);
-  void printmodel(ssmodels_t &init);
+  arma::mat Sigma; // If Zeros then deterministic models
+
   virtual ~ssmodels_t();
-  arma::mat updateLTI(ssmodels_t &old, arma::mat x_k, arma::mat u_k);
-  arma::mat updateLTIad(ssmodels_t &old, arma::mat x_k, arma::mat u_k,
-                        arma::mat d_k);
-  arma::mat updateLTIst(ssmodels_t &old, arma::mat x_k, arma::mat u_k,
-                        arma::mat d_k);
-  arma::mat updateLTI(arma::mat A, arma::mat B, arma::mat Q, arma::mat x_k,
-                      arma::mat u_k);
-  arma::mat updateLTIad(arma::mat A, arma::mat B, arma::mat F, arma::mat Q,
-                        arma::mat x_k, arma::mat u_k, arma::mat d_k);
-  arma::mat updateLTI(arma::mat A, arma::mat Q, arma::mat x_k);
-  arma::mat updatefunc(func f, void *f_data, arma::mat x_k);
-  arma::mat updateBi(arma::mat A, arma::mat B, arma::mat N, arma::mat Q,
-                     arma::mat x_k, arma::mat u_k);
 };
 
 static arma::mat readMatrixMat(const char *fn, const char *var) {

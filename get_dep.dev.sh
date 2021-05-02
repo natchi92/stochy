@@ -15,9 +15,9 @@ echo "--------------------------------"
 echo "working on armadillo ..."
 mkdir -p armadillo
 cd armadillo
-wget https://kent.dl.sourceforge.net/project/arma/armadillo-9.200.5.tar.xz
-tar -xvf armadillo-9.200.5.tar.xz --strip-components 1
-rm armadillo-9.200.5.tar.xz
+wget https://kent.dl.sourceforge.net/project/arma/armadillo-10.4.1.tar.xz
+tar -xvf armadillo-10.4.1.tar.xz --strip-components 1
+rm armadillo-10.4.1.tar.xz
 ./configure
 make
 sudo make install

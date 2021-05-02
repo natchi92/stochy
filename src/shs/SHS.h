@@ -26,7 +26,8 @@ public:
 private:
   bool shs; // 1- SHS, 0- HS
 public:
-  shs_t() {
+  shs_t()
+  {
     n = 1; // Dimension of continuous state space in given mode
     p_k = arma::mat(Q, n);
     q_0 = arma::mat(Q, 1); // Initial mode
@@ -36,7 +37,9 @@ public:
     exdata_t x_data;
     std::vector<T> Tq;
   }
-  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old, exdata_t &data) {
+ 
+  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old, exdata_t &data) 
+  {
     Q = disc; // Discrete modes
     n = num;  // Dimension of continuous state space in given mode
     p_k = data.InitTq[0];
@@ -44,36 +47,39 @@ public:
     x_mod = old;
     x_data = data;
     Tq = tq;
-    if (old[0].sigma == (0)) {
-      shs = 0;
-    } else {
-      shs = 1;
-    }
+    shs = old[0].sigma.is_empty() ? 0 : 1;
+
     // Check dimensions of data
     int err = this->checkData();
-    switch (err) {
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-    }
-    default: { std::cout << "Correct input vectors size" << std::endl; }
+    switch (err) 
+    {
+      case 3: 
+      {
+        std::cout << "Incorrect size of disturbance vector" << std::endl;
+	break;
+      }
+      default: 
+      {   
+        std::cout << "Correct input vectors size" << std::endl;
+	break;
+      }
     }
   }
 
-  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old) {
+  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old) 
+  {
     Q = disc; // Discrete modes
     n = num;  // Dimension of continuous state space in given mode
     p_k = arma::zeros<arma::mat>(1, 1);
     q_0 = arma::zeros<arma::mat>(1, 1); // Initial mode
+
     p_k.empty();
     q_0.empty();
+
     x_mod = old;
     x_data = new exdata_t;
     Tq = tq;
-    if (old[0].sigma == (0)) {
-      shs = 0;
-    } else {
-      shs = 1;
-    }
+    shs = old[0].sigma.is_empty() ? 0 : 1;
   }
 
   shs_t(T2 disc, int num, std::vector<ssmodels_t> &old, exdata_t &data) {
@@ -84,25 +90,32 @@ public:
     x_mod = old;
     x_data = data;
     Tq = arma::zeros<arma::mat>(1, 1);
-    if (old[0].sigma == (0)) {
-      shs = 0;
-    } else {
-      shs = 1;
-    }
+    shs = old[0].sigma.is_empty() ? 0 : 1;
+    
     // Check dimensions of data
     int err = this->checkData();
-    switch (err) {
-    case 2: {
-      std::cout << "Incorrect size of input vector" << std::endl;
-    }
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-    }
-    default: { std::cout << "Correct input vectors size" << std::endl; }
+    switch (err) 
+    {
+      case 2: 
+      {
+        std::cout << "Incorrect size of input vector" << std::endl;
+	break;
+       }
+      case 3: 
+      {
+        std::cout << "Incorrect size of disturbance vector" << std::endl;
+	break;
+      }
+      default:
+      { 
+        std::cout << "Correct input vectors size" << std::endl; 
+        break;
+      }
     }
   }
 
-  shs_t(T tq, std::vector<ssmodels_t> &old, exdata_t &data) {
+  shs_t(T tq, std::vector<ssmodels_t> &old, exdata_t &data) 
+  {
     Q = 1;            // Discrete modes
     n = old[0].x_dim; // Dimension of continuous state space in given mode
     p_k = data.InitTq[0];
@@ -110,39 +123,48 @@ public:
     x_mod = old;
     x_data = data;
     Tq = tq;
-    if (old[0].sigma == (0)) {
-      shs = 0;
-    } else {
-      shs = 1;
-    }
+    shs = old[0].sigma.is_empty() ? 0 : 1;
+    
     // Check dimensions of data
     int err = this->checkData();
-    switch (err) {
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-    }
-    default: { std::cout << "Correct input vectors size" << std::endl; }
+    switch (err) 
+    {
+      case 3: 
+      {
+        std::cout << "Incorrect size of disturbance vector" << std::endl;
+	break;
+      }
+      default: 
+      {
+	std::cout << "Correct input vectors size" << std::endl; 
+	break;
+      }
     }
   }
   virtual ~shs_t() {}
 
 private:
-  int checkData() {
+  int checkData() 
+  {
     int error = 0;
-    if (this->x_mod[0].x_dim != this->x_data.X[0].n_rows) {
+    if (this->x_mod[0].x_dim != this->x_data.X[0].n_rows) 
+    {
       error = 1;
     }
     if (this->x_mod[0].u_dim != this->x_data.U.n_cols &&
-        this->x_mod[0].u_dim > 0) {
+        this->x_mod[0].u_dim > 0) 
+    {
       error = 2;
     }
     if (this->x_mod[0].d_dim != this->x_data.D.n_cols &&
-        this->x_mod[0].d_dim > 0) {
+        this->x_mod[0].d_dim > 0) 
+    {
       error = 3;
     }
     return error;
   }
 };
+
 /*************************************************************************************************/
 
 // class template specialisation

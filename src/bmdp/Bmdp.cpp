@@ -10,6 +10,7 @@
 #include <armadillo>
 #include <cstddef>
 #include <ostream>
+#include <string>
 
 // Initialisation
 bmdp_t::bmdp_t() {
@@ -2863,65 +2864,50 @@ void bmdp_t::createSynthFile(arma::uvec phi1, arma::uvec Labels) {
   myfile.close();
 }
 
-void bmdp_t::populateBMDPSpec(matvar_t &content) {
+void bmdp_t::populateBMDPSpec(matvar_t &content) 
+{
   // For Tq check type for hybrid systems guards are sorted in cell type
   // For stochastic systems unless Tq is function of state, Tq is
   // given in form of numeric matrix and one has to check for
   // stochasticity
-  std::string B("boundary"), G("gridsize"), F("reftol");
-  const char *cB = B.c_str(), *cG = G.c_str(), *cF = F.c_str();
-  if (strcmp(content.name, cB) == 0) {
-    size_t stride = Mat_SizeOf(content.data_type);
-    char *data = (char *)content.data;
-    arma::mat mt(content.dims[0], content.dims[1]);
-    unsigned i, j = 0;
-    for (i = 0; i < content.dims[0] && i < 15; i++) {
-      for (j = 0; j < content.dims[1] && j < 15; j++) {
-        size_t idx = content.dims[0] * j + i;
-        char str[64];
-        void *t = data + idx * stride;
 
-        double val = strtod(str, NULL);
-        mt(i, j) = val;
-      }
+  std::string boundary{"boundary"}, gridsize{"gridsize"}, reftol{"reftol"};
+  std::string::size_type sz;
+
+  size_t stride = Mat_SizeOf(content.data_type);
+  std::string data  = (char *) content.data;
+  
+  arma::mat mt(content.dims[0], content.dims[1]);
+  unsigned i, j = 0;
+  
+  for (i = 0; i < content.dims[0] && i < 15; i++) 
+  {
+    for (j = 0; j < content.dims[1] && j < 15; j++) 
+    {
+      size_t idx = content.dims[0] * j + i;
+      data += std::to_string(idx*stride);
+      double val = std::stod(data.c_str(), &sz);
+      mt(i, j) = val;
     }
+  }
+
+  
+  if (boundary.compare(content.name) == 0)
+  {
     this->desc.boundary = mt;
-  } else if (strcmp(content.name, cG) == 0) {
-    size_t stride = Mat_SizeOf(content.data_type);
-    char *data = (char *)content.data;
-    arma::mat mt(content.dims[0], content.dims[1]);
-    unsigned i, j = 0;
-    for (i = 0; i < content.dims[0] && i < 15; i++) {
-      for (j = 0; j < content.dims[1] && j < 15; j++) {
-        size_t idx = content.dims[0] * j + i;
-        char str[64];
-        void *t = data + idx * stride;
-        sprintf(str, "%g", *(double *)t); // Assumes values are of type double
-        double val = strtod(str, NULL);
-        mt(i, j) = val;
-      }
-    }
+  } 
+  else if (gridsize.compare(content.name) == 0)
+  {
     this->desc.gridsize = mt;
-  } else if (strcmp(content.name, cF) == 0) {
-    size_t stride = Mat_SizeOf(content.data_type);
-    char *data = (char *)content.data;
-    arma::mat mt(content.dims[0], content.dims[1]);
-    unsigned i, j = 0;
-    for (i = 0; i < content.dims[0] && i < 15; i++) {
-      for (j = 0; j < content.dims[1] && j < 15; j++) {
-        size_t idx = content.dims[0] * j + i;
-        char str[64];
-        void *t = data + idx * stride;
-        sprintf(str, "%g", *(double *)t); // Assumes values are of type double
-        double val = strtod(str, NULL);
-        mt(i, j) = val;
-      }
-    }
+  } 
+  else if (reftol.compare(content.name) == 0)
+  {
     this->desc.reftol = mt;
   }
 }
 
-void bmdp_t::obtainBMDPdetailsfromMat(const char *fn) {
+void bmdp_t::obtainBMDPdetailsfromMat(const char *fn) 
+{
   // Reading model file input in .arma::mat format
   // and storing into ssmodel class
   mat_t *matf;
@@ -2958,8 +2944,9 @@ void bmdp_t::obtainBMDPdetailsfromMat(const char *fn) {
 
 // Use constructed BMDP and call synthetiser
 // obtain optimal policy
-void bmdp_t::runSynthesis(double eps, double iterationNum) {
-  char *policyType = "pessimistic";
+void bmdp_t::runSynthesis(double eps, double iterationNum) 
+{
+  const char* policyType = "pessimistic";
   bool maxPolicy = true;
 
   //___________________________________________________________________________________________________
@@ -3081,8 +3068,9 @@ void bmdp_t::runSynthesis(double eps, double iterationNum) {
 // Use constructed BMDP and call model checker
 // to obtain the "maximal optimistic" and "minimal pessimistic" policies on the
 // IMDP.
-void bmdp_t::runSafety(double eps, double iterationNum) {
-  char *policyType = "pessimistic";
+void bmdp_t::runSafety(double eps, double iterationNum) 
+{
+  const char* policyType = "pessimistic";
   bool maxPolicy = true;
 
   //___________________________________________________________________________________________________
@@ -3094,8 +3082,10 @@ void bmdp_t::runSafety(double eps, double iterationNum) {
   // If folder does not already exist then
   // create it else store in already existant
   // folder
-  if(checkFolderExists("../results") == -1) {
-    if(mkdir("../results", 0777) == -1) {
+  if(checkFolderExists("../results") == -1) 
+  {
+    if(mkdir("../results", 0777) == -1) 
+    {
        std::cerr << "Error cannot create results directory: " <<std::strerror(errno) <<std::endl;
        exit(0);
     }
@@ -3133,7 +3123,8 @@ void bmdp_t::runSafety(double eps, double iterationNum) {
 
   int numStates = 0;
   for (MDP::BMDP::Policy::iterator it = policy.begin(); it != policy.end();
-       it++) {
+       it++) 
+  {
     numStates += 1;
   }
   std::string Ns = std::to_string(numStates);
@@ -3142,23 +3133,29 @@ void bmdp_t::runSafety(double eps, double iterationNum) {
   size_t count = 0;
   this->Solution = arma::zeros<arma::mat>(minVals.size(),2);
   for (MDP::BMDP::Policy::iterator it = policy.begin(); it != policy.end();
-       it++) {
+       it++) 
+  {
     double sol = minVals[it->first];
     double E_q = (maxVals[it->first] - minVals[it->first]);
-    if (E_q < 0) {
+    if (E_q < 0) 
+    {
       E_q = -E_q;
     }
-    this->Solution(count,1) =1- sol;
-    this->Solution(count,0) = 1-maxVals[it->first];
+    
+    this->Solution(count,1) = 1 - sol;
+    this->Solution(count,0) = 1 - maxVals[it->first];
+    
     e.push_back(E_q);
     count++;
   }
+
   auto biggest = std::max_element(std::begin(e), std::end(e));
   this->E_max = *biggest;
 
 }
 
-arma::vec bmdp_t::getESafety(double eps, double iterationNum) {
+arma::vec bmdp_t::getESafety(double eps, double iterationNum) 
+{
 
   //___________________________________________________________________________________________________
   // SETTING UP BMDP MODEL
@@ -3169,8 +3166,10 @@ arma::vec bmdp_t::getESafety(double eps, double iterationNum) {
   // If folder does not already exist then
   // create it else store in already existant
   // folder
-  if(checkFolderExists("../results") == -1) {
-    if(mkdir("../results", 0777) == -1) {
+  if(checkFolderExists("../results") == -1) 
+  {
+    if(mkdir("../results", 0777) == -1) 
+    {
        std::cerr << "Error cannot create results directory: " <<std::strerror(errno) <<std::endl;
        exit(0);
     }
@@ -3208,12 +3207,14 @@ arma::vec bmdp_t::getESafety(double eps, double iterationNum) {
 
   std::vector<double> e_med;
   for (MDP::BMDP::Policy::iterator it = policy.begin(); it != policy.end();
-       it++) {
+       it++) 
+  {
     e_med.push_back(maxVals[it->first] - minVals[it->first]);
   }
 
   arma::vec e(e_med.size());
-  for (unsigned i = 0; i < e_med.size(); ++i) {
+  for (unsigned i = 0; i < e_med.size(); ++i) 
+  {
     e(i) = e_med[i];
   }
   return e;
@@ -3221,8 +3222,9 @@ arma::vec bmdp_t::getESafety(double eps, double iterationNum) {
 
 // Use constructed BMDP and call synthetiser
 // obtain optimal policy
-arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
-  char *policyType = "pessimistic";
+arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) 
+{
+  const char* policyType = "pessimistic";
   bool maxPolicy = true;
 
   //___________________________________________________________________________________________________
@@ -3233,9 +3235,11 @@ arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
   // If folder does not already exist then
   // create it else store in already existant
   // folder
-  if(checkFolderExists("../results") == -1) {
-    if(mkdir("../results", 0777) == -1) {
-       std::cerr << "Error cannot create results directory: " <<std::strerror(errno) <<std::endl;
+  if(checkFolderExists("../results") == -1) 
+  {
+    if(mkdir("../results", 0777) == -1) 
+    {
+       std::cerr << "Error cannot create results directory: " << std::strerror(errno) << std::endl;
        exit(0);
     }
   }
@@ -3244,6 +3248,7 @@ arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
 
   // check if bmpd is valid
   bmdp.isValid();
+
   //---------------------------------------------------------------------------------------------------
 
   //___________________________________________________________________________________________________
@@ -3276,7 +3281,8 @@ arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
   std::vector<MDP::State> vecState;
 
   // add states to IMC with cost 0 every where and cost 1 at the terminal states
-  for (unsigned int i = 0; i < stateNum; i++) {
+  for (unsigned int i = 0; i < stateNum; i++) 
+  {
     vecState.push_back(MDP::State(i));
     imc.addState(&vecState[i], bmdp.getCost(i));
   }
@@ -3287,10 +3293,11 @@ arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
 
   // add the tranistion probabilities to imc
   for (MDP::BMDP::Policy::iterator it = policy.begin(); it != policy.end();
-       it++) {
-    std::vector<MDP::State::StateID> dest =
-        bmdp.getDestinations(it->first, it->second);
-    for (unsigned int i = 0; i < dest.size(); i++) {
+       it++) 
+  {
+    std::vector<MDP::State::StateID> dest = bmdp.getDestinations(it->first, it->second);
+    for (unsigned int i = 0; i < dest.size(); i++) 
+    {
       std::pair<double, double> probs =
           bmdp.getProbabilityInterval(it->first, it->second, dest[i]);
       imc.addTransition(it->first, 0, dest[i], probs.first, probs.second);
@@ -3318,22 +3325,27 @@ arma::vec bmdp_t::getESynthesis(double eps, double iterationNum) {
   std::vector<double> e_med;
 
   for (MDP::BMDP::Policy::iterator it = policy.begin(); it != policy.end();
-       it++) {
+       it++) 
+  {
     e_med.push_back(maxVals[it->first] - minVals[it->first]);
   }
 
   arma::vec e(e_med.size());
-  for (unsigned i = 0; i < e_med.size(); ++i) {
+  for (unsigned i = 0; i < e_med.size(); ++i) 
+  {
     e(i) = e_med[i];
   }
+  
   return e;
 }
 
-void bmdp_t::readSpec(const char *t_path) {
+void bmdp_t::readSpec(const char *t_path) 
+{
   std::ifstream fin(t_path);
   int actNum = 0;
   int specTH = 0;
-  if (!fin) {
+  if (!fin)
+  {
     std::cout << "Could NOT open the file" << std::endl;
     return;
   }
@@ -3349,7 +3361,8 @@ void bmdp_t::readSpec(const char *t_path) {
   fin.close();
 }
 
-void bmdp_t::formatOutput(double time, std::string cT) {
+void bmdp_t::formatOutput(double time, std::string cT) 
+{
 
   // Get initial values
   // 1. Max abstraction errors
@@ -3357,7 +3370,8 @@ void bmdp_t::formatOutput(double time, std::string cT) {
 
   // 2. Number of states
   int nstates = 0;
-  for (unsigned i = 0; i < this->mode.size(); ++i) {
+  for (unsigned i = 0; i < this->mode.size(); ++i) 
+  {
     nstates += this->mode[i].vertices.size();
   }
 
@@ -3380,13 +3394,17 @@ void bmdp_t::formatOutput(double time, std::string cT) {
   std::string str1("yes");
   std::cout << "Would you like to store the results genereated by IMDP [y- yes, n - no] " << std::endl;
   std::cin >> exportOpt;
-  if ((exportOpt.compare(str) == 0) || (exportOpt.compare(str1) == 0)) {
-    if(checkFolderExists("../results") == -1) {
-      if(mkdir("../results", 0777) == -1) {
+  if ((exportOpt.compare(str) == 0) || (exportOpt.compare(str1) == 0)) 
+  {
+    if(checkFolderExists("../results") == -1) 
+    {
+      if(mkdir("../results", 0777) == -1) 
+      {
         std::cerr << "Error cannot create results directory: " <<std::strerror(errno) <<std::endl;
         exit(0);
-       }
+      }
     }
+
     // Store run times
     std::string f_name = "../results/IMDP_Runtime_" + Ns + "_" + cT + ".txt";
     myfile.open(f_name);
@@ -3414,6 +3432,7 @@ void bmdp_t::formatOutput(double time, std::string cT) {
       this->Policy.save(pol_name, arma::raw_ascii);
     }
   }
+  
   // Remove bmdp.txt file used to generate policy / perform verification
   // by imdp engine
   remove( "../results/bmdp.txt" );

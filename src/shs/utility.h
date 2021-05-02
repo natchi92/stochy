@@ -276,10 +276,12 @@ static int binarySearch(int arr[], int l, int r, int x) {
 }
 
 // union of arr1[0..m-1] and arr2[0..n-1]
-static int *Union(int arr1[], int arr2[], int m, int n) {
+static std::vector<int> Union(int arr1[], int arr2[], int m, int n) 
+{
   // Before finding union, make sure arr1[0..m-1]
   // is smaller
-  if (m > n) {
+  if (m > n) 
+  {
     int *tempp = arr1;
     arr1 = arr2;
     arr2 = tempp;
@@ -294,16 +296,17 @@ static int *Union(int arr1[], int arr2[], int m, int n) {
   // Sort the first array and print its elements (these two
   // steps can be swapped as order in output is not important)
   std::sort(arr1, arr1 + m);
-  for (int i = 0; i < m; i++) {
-  }
+  for (int i = 0; i < m; i++)  { }
 
   // Search every element of bigger array in smaller array
   // and print the element if not found
-  int res[10];
+  std::vector<int> res;
   int count = 0;
-  for (int i = 0; i < n; i++) {
-    if (binarySearch(arr1, 0, m - 1, arr2[i]) == -1) {
-      res[count] = arr2[i];
+  for (int i = 0; i < n; i++) 
+  {
+    if (binarySearch(arr1, 0, m - 1, arr2[i]) == -1) 
+    {
+      res.push_back(arr2[i]);
       count++;
     }
   }
@@ -315,48 +318,73 @@ static int *Union(int arr1[], int arr2[], int m, int n) {
 // [ a 0 0;
 //   0 b 0;
 //   0 0 c];
-static void checkDiagonal(arma::mat mat) {
-  try {
+static void checkDiagonal(arma::mat mat) 
+{
+  try 
+  {
     unsigned sizeC_mat = mat.n_cols;
     unsigned sizeR_mat = mat.n_rows;
-    if (sizeC_mat != sizeR_mat) {
+    if (sizeC_mat != sizeR_mat) 
+    {
       throw " Matrix is not square, thus not diagonal!";
-    } else {
-      for (unsigned i = 0; i < sizeR_mat; ++i) {
-        for (unsigned j = 0; j < sizeC_mat; ++j) {
-          if (i == j) {
-            if (mat(i, j) == 0) {
+    } 
+    else 
+    {
+      for (unsigned i = 0; i < sizeR_mat; ++i) 
+      {
+        for (unsigned j = 0; j < sizeC_mat; ++j) 
+	{
+          if (i == j)
+	  {
+            if (mat(i, j) == 0) 
+	    {
               throw "Matrix is not diagonal! ";
             }
-          } else {
-            if (mat(i, j) != 0) {
+          } 
+	  else
+	  {
+            if (mat(i, j) != 0) 
+	    {
               throw "Matrix is not diagonal! ";
             }
           }
         }
       }
     }
-  } catch (const char *msg) {
+  } 
+  catch (const char *msg) 
+  {
     std::cerr << msg << std::endl;
     exit(0);
   }
 }
 
 // Check if matrix is diagonal
-static bool isDiagonal(arma::mat mat) {
+static bool isDiagonal(arma::mat mat) 
+{
   unsigned sizeC_mat = mat.n_cols;
   unsigned sizeR_mat = mat.n_rows;
-  if (sizeC_mat != sizeR_mat) {
+  if (sizeC_mat != sizeR_mat) 
+  {
     return 0;
-  } else {
-    for (unsigned i = 0; i < sizeR_mat; ++i) {
-      for (unsigned j = 0; j < sizeC_mat; ++j) {
-        if (i == j) {
-          if (mat(i, j) == 0) {
+  } 
+  else 
+  {
+    for (unsigned i = 0; i < sizeR_mat; ++i) 
+    {
+      for (unsigned j = 0; j < sizeC_mat; ++j) 
+      {
+        if (i == j) 
+	{
+          if (mat(i, j) == 0) 
+	  {
             return 0;
           }
-        } else {
-          if (mat(i, j) != 0) {
+        }
+       	else
+       	{
+          if (mat(i, j) != 0) 
+	  {
             return 0;
           }
         }
@@ -366,37 +394,49 @@ static bool isDiagonal(arma::mat mat) {
   return 1;
 }
 
-static std::vector<std::string> getAllCombinations(int N) {
+static std::vector<std::string> getAllCombinations(int N) 
+{
   // string to store N-digit binary number
   std::string str;
   std::vector<std::string> res;
+
   // construct N-digit binary number filled with all 0's
   int j = N;
-  while (j--)
+  while (j--) 
+  {
     str.push_back('0');
+  }
   // get first set of all k-bit all zeros
   std::string temp = "0";
   j = N - 1;
-  while (j--)
+  while (j--) 
+  {
     temp += "0";
+  }
 
   res.push_back(temp);
+  
   // store all numbers with k-bit set together in ascending order
-  for (int k = 1; k <= N; k++) {
+  for (int k = 1; k <= N; k++) 
+  {
     // set last k bits to '1'
     str[N - k] = '1';
     std::string curr = str;
 
-    do {
+    do 
+    {
       res.push_back(str);
       // std::cout << str << std::endl;
-    } while (next_permutation(str.begin(), str.end()));
+    } 
+    while (next_permutation(str.begin(), str.end()));
   }
   return res;
 }
 
-static size_t skipControls(const char *pData, size_t pos, size_t length) {
-  while (pos < length) {
+static size_t skipControls(const char *pData, size_t pos, size_t length) 
+{
+  while (pos < length) 
+  {
     if ((pData[pos] != 32) && (pData[pos] != 8) && (pData[pos] != '\n'))
       return pos;
     pos++;
@@ -411,33 +451,45 @@ static void rec(std::vector<arma::mat> &intervals, arma::mat cells,
                 arma::mat temp, unsigned index, unsigned what, unsigned n_rows,
                 unsigned cols) {
 
-  for (unsigned r = 0; r < what; r = r + 2) {
+  for (unsigned r = 0; r < what; r = r + 2) 
+  {
     arma::mat tempr = cells(index, arma::span(r, r + 1));
 
-    if (n_rows < 3) {
+    if (n_rows < 3) 
+    {
       tempr = join_vert(temp, tempr);
-    } else {
+    } 
+    else 
+    {
       tempr = temp;
 
       tempr.row(cols) = cells(cols, arma::span(r, r + 1));
       cols++;
-      if (cols > n_rows - 1) {
+      if (cols > n_rows - 1) 
+      {
         cols = 0;
       }
       intervals.push_back(tempr);
     }
 
-    if ((n_rows - 1) == index) {
-      if (n_rows < 3) {
+    if ((n_rows - 1) == index) 
+    {
+      if (n_rows < 3) 
+      {
         intervals.push_back(tempr);
       }
-    } else {
-      if (n_rows > 2) {
+    } 
+    else 
+    {
+      if (n_rows > 2) 
+      {
         rec(intervals, cells,
             cells(arma::span(0, n_rows - 1), arma::span(r, r + 1)), index + 1,
             what, n_rows, cols);
 
-      } else {
+      }
+      else
+      {
         rec(intervals, cells, cells(0, arma::span(r, r + 1)), index + 1, what,
             n_rows, 0);
       }

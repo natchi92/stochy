@@ -2417,13 +2417,13 @@ void faust_t::MCcreator(double epsilon) {
   case 6:
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+        double xmin[6] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                             (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) - this->X(j, dim + 3) * 0.5),
                             (this->X(j, 4) - this->X(j, dim + 4) * 0.5),
                             (this->X(j, 5) - this->X(j, dim + 5) * 0.5)};
-        double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+        double xmax[6] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                             (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) + this->X(j, dim + 3) * 0.5),
@@ -2444,12 +2444,12 @@ void faust_t::MCcreator(double epsilon) {
   case 5:
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+        double xmin[5] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                             (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) - this->X(j, dim + 3) * 0.5),
                             (this->X(j, 4) - this->X(j, dim + 4) * 0.5)};
-        double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+        double xmax[5] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                             (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) + this->X(j, dim + 3) * 0.5),
@@ -2469,11 +2469,11 @@ void faust_t::MCcreator(double epsilon) {
   case 4:
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+        double xmin[4] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                             (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) - this->X(j, dim + 3) * 0.5)};
-        double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+        double xmax[4] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                             (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                             (this->X(j, 3) + this->X(j, dim + 3) * 0.5)};
@@ -2493,10 +2493,10 @@ void faust_t::MCcreator(double epsilon) {
   case 3:
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+        double xmin[3] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                             (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) - this->X(j, dim + 2) * 0.5)};
-        double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+        double xmax[3] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                             (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                             (this->X(j, 2) + this->X(j, dim + 2) * 0.5)};
         std::vector<arma::mat> X = {this->X(i, arma::span(0, dim - 1))};
@@ -2514,7 +2514,7 @@ void faust_t::MCcreator(double epsilon) {
   case 2:
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
-        double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+        double xmin[2] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                             (this->X(j, 1) - this->X(j, dim + 1) * 0.5)},
                xmax[2] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                           (this->X(j, 1) + this->X(j, dim + 1) * 0.5)};
@@ -2603,13 +2603,13 @@ void faust_t::MCcreator_Contr(double epsilon) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < q; k++) {
-          double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+          double xmin[6] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                               (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) - this->X(j, dim + 3) * 0.5),
                               (this->X(j, 4) - this->X(j, dim + 4) * 0.5),
                               (this->X(j, 5) - this->X(j, dim + 5) * 0.5)};
-          double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+          double xmax[6] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                               (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) + this->X(j, dim + 3) * 0.5),
@@ -2633,12 +2633,12 @@ void faust_t::MCcreator_Contr(double epsilon) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < q; k++) {
-          double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+          double xmin[5] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                               (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) - this->X(j, dim + 3) * 0.5),
                               (this->X(j, 4) - this->X(j, dim + 4) * 0.5)};
-          double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+          double xmax[5] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                               (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) + this->X(j, dim + 3) * 0.5),
@@ -2661,11 +2661,11 @@ void faust_t::MCcreator_Contr(double epsilon) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < q; k++) {
-          double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+          double xmin[4] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                               (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) - this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) - this->X(j, dim + 3) * 0.5)};
-          double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+          double xmax[4] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                               (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) + this->X(j, dim + 2) * 0.5),
                               (this->X(j, 3) + this->X(j, dim + 3) * 0.5)};
@@ -2687,10 +2687,10 @@ void faust_t::MCcreator_Contr(double epsilon) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < q; k++) {
-          double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+          double xmin[3] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                               (this->X(j, 1) - this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) - this->X(j, dim + 2) * 0.5)};
-          double xmax[dim] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
+          double xmax[3] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                               (this->X(j, 1) + this->X(j, dim + 1) * 0.5),
                               (this->X(j, 2) + this->X(j, dim + 2) * 0.5)};
           std::vector<arma::mat> X = {this->X(i, arma::span(0, dim - 1))};
@@ -2711,7 +2711,7 @@ void faust_t::MCcreator_Contr(double epsilon) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < m; j++) {
         for (int k = 0; k < q; k++) {
-          double xmin[dim] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
+          double xmin[2] = {(this->X(j, 0) - this->X(j, dim) * 0.5),
                               (this->X(j, 1) - this->X(j, dim + 1) * 0.5)},
                  xmax[2] = {(this->X(j, 0) + this->X(j, dim) * 0.5),
                             (this->X(j, 1) + this->X(j, dim + 1) * 0.5)};

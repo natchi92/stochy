@@ -14,15 +14,17 @@
 // values for both continous variables
 // and discrete locations for the
 // simulator
+
+// TODO(ncauchi) convert into a struct and make it optionally defined
 class exdata_t {
 public:
-  std::vector<arma::mat> X; // Continuous variables: dim - x_dim,T
-  arma::mat U;              // Exogenous inputs: dim - u_dim,T
-  arma::mat D;              // Disturbance signals: dim - d_dim,T
+  std::vector<arma::mat> X;      // Continuous variables: dim - x_dim,T
+  arma::mat U;                   // Exogenous inputs: dim - u_dim,T
+  arma::mat D;                   // Disturbance signals: dim - d_dim,T
   std::vector<arma::mat> q_init; // initial  value discrete modes
   arma::mat x_k;                 // continuous variable evolution
-  arma::mat u_k;                // input variable evolution
-  arma::mat d_k;                // disturbance variable evolution
+  arma::mat u_k;                 // input variable evolution
+  arma::mat d_k;                 // disturbance variable evolution
   std::vector<arma::mat> InitTq; // initial disturbance
 
 public:
@@ -107,11 +109,11 @@ public:
     u_k = -1 * arma::ones<arma::mat>(1, 1);
     d_k = -1 * arma::ones<arma::mat>(1, 1);
     InitTq = InitTq_in;
-    d_k.reset();u_k.reset();
+    d_k.reset();
+    u_k.reset();
   }
 
-  exdata_t(std::vector<arma::mat> X_in, std::vector<arma::mat> q_init_in)
-  {
+  exdata_t(std::vector<arma::mat> X_in, std::vector<arma::mat> q_init_in) {
     X = X_in;
     U = -1 * arma::ones<arma::mat>(1, 1);
     D = -1 * arma::ones<arma::mat>(1, 1);
@@ -122,7 +124,8 @@ public:
     double nr = X_in[0].n_rows;
     double nc = X_in[0].n_cols;
     InitTq = {arma::eye<arma::mat>(nr, nc)};
-    d_k.reset();u_k.reset();
+    d_k.reset();
+    u_k.reset();
   }
 
   virtual ~exdata_t(){};

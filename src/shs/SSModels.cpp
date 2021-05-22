@@ -1,483 +1,309 @@
 //
 
 #include "SSModels.h"
-#include "matio.h" /*Reading .arma::mat files*/
+//#include "matio.h" /*Reading mat files*/
 #include <armadillo>
 #include <string>
 
-// Initialise an empty state space model
-ssmodels_t::ssmodels_t() 
+ssmodels_t::ssmodels_t(std::optional<arma::mat> _A,
+                       std::optional<arma::mat> _B,
+                       std::optional<arma::mat> _C,
+                       std::optional<arma::mat> _F,
+                       std::optional<arma::mat> _N,
+                       std::optional<arma::mat> _G,
+                       std::optional<arma::mat> _Sigma,
+                       double _delta_t
+                     ) : A(_A), B(_B), C(_C),
+                         F(_F), N(_N), G(_G),
+                         Sigma(_Sigma),
+                         delta_t(_delta_t)
 {
-  x_dim = -1;
-  u_dim = -1;
-  d_dim = -1;
-  delta_t = -1;
-  A = arma::zeros<arma::mat>(1, 1);
-  B = arma::zeros<arma::mat>(1, 1);
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = arma::zeros<arma::mat>(1, 1);
-}
+  // Initialising
+  std::cout << "Here" <<  *A << std::endl;
+};
 
-// Initialise an empty state space model
-// with correct dimensions
-ssmodels_t::ssmodels_t(int x_d, int u_d, int d_d) 
+ssmodels_t::ssmodels_t(arma::mat _A, arma::mat _G):
+                      ssmodels_t(std::make_optional(_A),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::make_optional(_G),
+                                 std::nullopt,
+                                 1.0) {};
+
+ssmodels_t::ssmodels_t(arma::mat _A, arma::mat _B, arma::mat _Sigma):
+                      ssmodels_t(std::make_optional(_A),
+                                 std::make_optional(_B),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::make_optional(_Sigma),
+                                 1.0) {};
+
+ssmodels_t::ssmodels_t(arma::mat _A, arma::mat _B, arma::mat _N, arma::mat _Sigma) :
+                      ssmodels_t(std::make_optional(_A),
+                                 std::make_optional(_B),
+                                 std::nullopt,
+                                 std::nullopt,
+                                 std::make_optional(_N),
+                                 std::nullopt,
+                                 std::make_optional(_Sigma),
+                                 1.0) {};
+
+
+ssmodels_t::ssmodels_t(arma::mat _A, arma::mat _B, arma::mat _G, arma::mat _F, arma::mat _Sigma):
+                      ssmodels_t(std::make_optional(_A),
+                                 std::make_optional(_B),
+                                 std::nullopt,
+                                 std::make_optional(_F),
+                                 std::nullopt,
+                                 std::make_optional(_G),
+                                 std::make_optional(_Sigma),
+                                 1.0) {};
+
+
+void ssmodels_t::checkModelStructure()
 {
-  x_dim = x_d;
-  u_dim = u_d;
-  d_dim = d_d;
-  delta_t = -1;
-  A = arma::zeros<arma::mat>(1, 1);
-  B = arma::zeros<arma::mat>(1, 1);
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-}
-
-// Initialise state space model based on user
-// defined inputs
-ssmodels_t::ssmodels_t(int dt, arma::mat Am, arma::mat Sm) 
-{
-  x_dim = Am.n_rows;
-  u_dim = 0;
-  d_dim = 0;
-  delta_t = dt;
-  A = Am;
-  B = arma::zeros<arma::mat>(1, 1);
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
-
-ssmodels_t::ssmodels_t(arma::mat Am, arma::mat Qm, arma::mat Sm) 
-{
-  x_dim = Am.n_rows;
-  u_dim = 0;
-  d_dim = 0;
-  delta_t = 1;
-  A = Am;
-  B = arma::zeros<arma::mat>(1, 1);
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = Qm;
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
-
-
-// Initialise state space model based on user
-// defined inputs
-ssmodels_t::ssmodels_t(arma::mat Am, arma::mat Sm) 
-{
-  x_dim = Am.n_rows;
-  u_dim = 0;
-  d_dim = 0;
-  delta_t = 1;
-  A = Am;
-  B = arma::zeros<arma::mat>(1, 1);
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::eye<arma::mat>(x_dim, x_dim);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
-
-// Initialise state space model based on user
-// defined inputs (for BMDP model checking)
-ssmodels_t::ssmodels_t(int dt, arma::mat Am, arma::mat Fm, arma::mat Sm,
-                       int sig) {
-  x_dim = Am.n_rows;
-  u_dim = 0;
-  d_dim = 0;
-  delta_t = dt;
-  A = Am;
-  if (sig) 
+  // most basic model consists of having only the A Matrix
+  try
   {
-    F = Fm;
-  } 
-  else 
-  {
-    B = Fm;
+    if (A.has_value())
+    {
+
+      if (A.value().is_square())
+      {
+        int x_dim = A.value().n_rows;
+
+        // Is the model stochastic ?
+        if (G.has_value())
+        {
+          if( !(G.value().is_square()) || (G.value().n_rows != x_dim))
+          {
+            throw " Incorrectly specified sigma matrix";
+          }
+        }
+
+        // do we have a control input?
+        if(B.has_value())
+        {
+          if(!(B.value().is_vec()) || (B.value().n_rows != x_dim))
+          {
+            throw " Incorrectly specified B matrix";
+          }
+        }
+
+        // do we have a control input?
+        if(F.has_value())
+        {
+          if(!(F.value().is_vec()) || (F.value().n_rows != x_dim))
+          {
+            throw " Incorrectly specified F matrix";
+          }
+        }
+
+        // TODO(ncauchi) check-dimensions and shapes of rest of matrices (C, N, sigma)
+
+        printf(" Correctly compiled state-space model\n");
+        printModelStructure();
+      }
+    }
+    else
+    {
+      throw " The simplest model is of form x[k+1] = Ax[k], A matrix needs to be specified";
+    }
   }
-  C = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
+  catch (const char *msg)
+  {
+    std::cerr << msg << std::endl;
+    exit(0);
+  }
 }
 
-ssmodels_t::ssmodels_t( double d_t, arma::mat Am, arma::mat Bm,  arma::mat Fm,
-                      arma::mat Qm, arma::mat Sm) 
+void ssmodels_t::printModelStructure()
 {
-  x_dim = Am.n_rows;
-  u_dim = Bm.n_rows;
-  d_dim = Fm.n_rows;
-  delta_t = d_t;
-  A = Am;
-  B = Bm;
-  F = Fm;
-  Q = Qm;
-  C = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
+  std::cout << " ------------------------------------ "   << std::endl;
+  std::cout << " Dimensions:   "                          << std::endl;
+  std::cout << " ------------------------------------ "   << std::endl;
+  int x_dim = A.has_value() ? A.value().n_rows : 0;
+  int u_dim = B.has_value() ? B.value().n_rows : 0;
+  int g_dim = G.has_value() ? G.value().n_rows : 0;
 
-// Initialise state space model based on user
-// defined inputs (for BMDP model checking)
-ssmodels_t::ssmodels_t(arma::mat Am, arma::mat Bm, arma::mat Qm, arma::mat Sm)
-{
-  x_dim = Am.n_rows;
-  u_dim = Bm.n_rows;
-  d_dim = 0;
-  delta_t = 15;
-  A = Am;
-  B = Bm;
-  Q = Qm;
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-  N.reset(); C.reset(); F.reset();
-}
+  std::cout << " # Continuous variables: " << x_dim << std::endl;
+  std::cout << " # Inputs: "               << u_dim << std::endl;
+  std::cout << " # Disturbances: "         << g_dim << std::endl;
+  std::cout << " ------------------------------------ "   << std::endl;
+  std::cout << " ------------------------------------ "   << std::endl;
+  std::cout << " State space model: "                     << std::endl;
+  std::cout << " Sampling time: " << delta_t << std::endl;
 
-// Initialise state space model based on user
-// defined inputs
-ssmodels_t::ssmodels_t(int dt, arma::mat Am, arma::mat Bm, arma::mat Sm) 
-{
-  x_dim = Am.n_rows;
-  u_dim = Bm.n_cols;
-  d_dim = 0;
-  delta_t = dt;
-  A = Am;
-  B = Bm;
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
-// Initialise state space model based on user
-// defined inputs
-ssmodels_t::ssmodels_t(int dt, arma::mat Am, arma::mat Bm, arma::mat Nm,
-                       arma::mat Sm) 
-{
-  x_dim = Am.n_rows;
-  u_dim = Bm.n_cols;
-  d_dim = 0;
-  delta_t = dt;
-  A = Am;
-  B = Bm;
-  C = arma::zeros<arma::mat>(1, 1);
-  F = arma::zeros<arma::mat>(1, 1);
-  Q = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
+  if (delta_t)
+  {
+    // TODO(ncauchi) check definition for IMDP version
+    std::cout << " x[k+1] = Ax[k] + Bu[k] + N(u[k] (x) x[k]) + G g[k] + F + Sigma W[k] \n"
+              << std::endl;
 
-// Initialise state space model based on user
-// defined inputs
-ssmodels_t::ssmodels_t(int x_d, int u_d, int d_d, double d_t, arma::mat Am,
-                       arma::mat Bm, arma::mat Cm, arma::mat Fm, arma::mat Qm,
-                       arma::mat Sm)
-{
-  x_dim = x_d;
-  u_dim = u_d;
-  d_dim = d_d;
-  delta_t = d_t;
-  A = Am;
-  B = Bm;
-  C = Cm;
-  F = Fm;
-  Q = Qm;
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
-}
+  }
+  else
+  {
+    std::cout << " dot(x(t)) = (Ax(t)+Bu(t)+ Gg(t) + F) dt + Sigma dW \n "
+              << std::endl;
+  }
 
-ssmodels_t::ssmodels_t(arma::mat Am, arma::mat Bm, arma::mat Nm, arma::mat Qm, arma::mat Sm) 
-{
+  if (x_dim)
+  {
+    std::cout << " A : \n" <<  A.value() << std::endl;
+  }
 
-  x_dim = Am.n_cols;
-  u_dim = Bm.n_cols;
-  d_dim = 0;
-  A = Am;
-  B = Bm;
-  C = arma::zeros<arma::mat>(x_dim,1);
-  F = arma::zeros<arma::mat>(x_dim,d_dim);
-  Q = Qm;
-  N = Nm;
-  sigma = Sm;
-}
+  if (u_dim)
+  {
+    std::cout << " B : \n" <<  B.value() << std::endl;
+  }
 
-ssmodels_t::ssmodels_t(double d_t, arma::mat Am, arma::mat Bm, arma::mat Cm,
-                       arma::mat Fm, arma::mat Qm, arma::mat Sm) 
-{
-  x_dim = Am.n_cols;
-  u_dim = Bm.n_cols;
-  d_dim = Fm.n_cols;
-  delta_t = d_t;
-  A = Am;
-  B = Bm;
-  C = Cm;
-  F = Fm;
-  Q = Qm;
-  N = arma::zeros<arma::mat>(1, 1);
-  sigma = Sm;
+  if (N.has_value())
+  {
+    std::cout << " N : \n" <<  N.value() << std::endl;
+  }
+
+  if (g_dim)
+  {
+    std::cout << " G : \n" <<  G.value() << std::endl;
+  }
+
+  if (F.has_value())
+  {
+    std::cout << " F : \n" <<  F.value() << std::endl;
+  }
+
+  if (Sigma.has_value())
+  {
+    std::cout << " Sigma : \n" << Sigma.value() << std::endl;
+  }
+  std::cout << " ------------------------------------ "   << std::endl;
 }
 
 // Initialise state space model based on data
-// from input .arma::mat file
-//
-void ssmodels_t::obtainSSfromMat(const char *fn, ssmodels_t &init) 
+from input mat file
+void ssmodels_t::obtainSSfromMat(const char *fn, std::optional<int> currentMode)
 {
-  // Reading model file input in .arma::mat format
-  // and storing into ssmodel class
-  try {
-    mat_t *matf;
-    matvar_t *matvar, *contents;
-    // Read .arma::mat file
-    matf = Mat_Open(fn, MAT_ACC_RDONLY);
-    if (matf) // if successful in reading file
-    {
-      // read each variable within file and populate
-      // state space model based on variable name
-      while ((matvar = Mat_VarReadNextInfo(matf)) != NULL) {
-        contents = Mat_VarRead(matf, matvar->name);
-        init.populate(init, *contents);
-        Mat_VarFree(matvar);
-        matvar = NULL;
-        contents = NULL;
-      }
-    } else // unsuccesful in opening file
-    {
-      throw "Error opening mat file";
-    }
-    Mat_Close(matf);
-  } catch (const char *msg) {
-    std::cerr << msg << std::endl;
-    exit(0);
-  }
-}
+	// Reading model file input in MATLAB mat format and storing into ssmodel class
+	mat_t *matf;
+	matvar_t *matvar, *contents;
+	try
+	{
+		// Read mat file
+		matf = Mat_Open(fn, MAT_ACC_RDONLY);
+		if (matf) // if successful in reading file
+		{
+			// read each variable within file and populate
+			// state space model based on variable name
+			matvar = Mat_VarReadNextInfo(matf);
+			while (matvar != NULL)
+			{
+				contents = Mat_VarRead(matf, matvar->name);
+				if (contents != NULL)
+				{
 
-// Initialise state space model based on data
-// from input .arma::mat file and current mode
-void ssmodels_t::obtainSSfromMat(const char *fn, ssmodels_t &init,
-                                 int curMode) {
-  // Reading model file input in .arma::mat format
-  // and storing into ssmodel class
-  mat_t *matf;
-  matvar_t *matvar, *contents;
-  try {
-    // Read .arma::mat file
-    matf = Mat_Open(fn, MAT_ACC_RDONLY);
-    if (matf) // if successful in reading file
-    {
-      // read each variable within file and populate
-      // state space model based on variable name
-      matvar = Mat_VarReadNextInfo(matf);
-      while (matvar != NULL) {
-        contents = Mat_VarRead(matf, matvar->name);
-        if (contents != NULL) {
-          init.populate(init, *contents, curMode);
-        }
-        Mat_VarFree(matvar);
-        matvar = NULL;
-        contents = NULL;
-        matvar = Mat_VarReadNextInfo(matf);
-      }
-    } else // unsuccessful in opening file
-    {
-      throw "Error opening arma::mat file";
-    }
-    Mat_Close(matf);
-    init.x_dim = init.A.n_cols;
-    // init.u_dim = init.B.n_n_cols();
-    // init.d_dim = init.F.n_n_cols();
-  } catch (const char *msg) {
-    std::cerr << msg << std::endl;
-    exit(0);
-  }
-}
-
-void ssmodels_t::obtainBMDPfromMat(const char *fn, ssmodels_t &init,
-                                   int curMode) {
-  // Reading model file input in .arma::mat format
-  // and storing into ssmodel class
-
-  mat_t *matf;
-  matvar_t *matvar, *contents;
-  try {
-    // Read .arma::mat file
-    matf = Mat_Open(fn, MAT_ACC_RDONLY);
-    if (matf) // if successful in reading file
-    {
-      // read each variable within file and populate
-      // state space model based on variable name
-      matvar = Mat_VarReadNextInfo(matf);
-      while (matvar != NULL) {
-        contents = Mat_VarRead(matf, matvar->name);
-        if (contents != NULL) {
-          init.populateBMDP(init, *contents, curMode);
-        }
-        Mat_VarFree(matvar);
-        matvar = NULL;
-        contents = NULL;
-        matvar = Mat_VarReadNextInfo(matf);
-      }
-    } else // unsuccessful in opening file
-    {
-      throw "Error opening .mat file";
-    }
-    Mat_Close(matf);
-    init.x_dim = init.A.n_cols;
-    // init.u_dim = init.B.n_n_cols();
-    // init.d_dim = init.F.n_n_cols();
-  } catch (const char *msg) {
-    std::cerr << msg << std::endl;
-    exit(0);
-  }
+					populateStateSpaceModelFromMatFile(*contents, currentMode.has_value() ? currentMode.value() : 0);
+				}
+				Mat_VarFree(matvar);
+				matvar = NULL;
+				contents = NULL;
+				matvar = Mat_VarReadNextInfo(matf);
+			}
+		}
+    else // unsuccessful in opening file
+		{
+			throw " ERROR: Could not open MAT file";
+		}
+		Mat_Close(matf);
+	}
+	catch (const char *msg)
+	{
+		std::cerr << msg << std::endl;
+		exit(0);
+	}
 }
 
 // Update ssmodel based on input data read from arma::mat file
 // 0. Variable name = "Variable + mode"
 // 1. populate state space based on variable name
 // 2. Check if dimensions match
-//
-void ssmodels_t::populate(ssmodels_t &init, matvar_t &content, int curMode)
+// Note: This is generic for both abstraction types
+void ssmodels_t::populateStateSpaceModelFromMatFile(matvar_t &content, int currentMode)
 {
-  // For Tq check type for hybrid systems guards are sorted in cell type
-  // For stochastic systems unless Tq is function of state, Tq is
-  // given in form of numeric matrix and one has to check for
-  // stochasticity
-  std::string A("A"), B("B"), C("C"), F("F"), Q("Q"), Sigma("sigma"), N("N"), dim("dim"), ddim("ddim"), udim("udim"), dt("dt");
-  
-  if (curMode > 0)
+	// For Tq check type for hybrid systems guards are sorted in cell type
+	// For stochastic systems unless Tq is function of state, Tq is
+	// given in form of numeric matrix and one has to check for
+	// stochasticity
+  //TODO(ncauchi) change Q to G in mat files
+	std::string As("A"), Bs("B"), Cs("C"), Fs("F"), Gs("Q"), Sigmas("Sigma"), Ns("N"), dt("dt");
+	std::string mode = std::to_string(currentMode);
+
+  if (currentMode > 0)
   {
-    std::string mode = std::to_string(curMode);
-    A += mode;
-    B += mode;
-    C += mode;
-    F += mode;
-    Q += mode;
-    Sigma += mode;
-    N += mode;
+    std::string mode = std::to_string(currentMode);
+    As += mode;
+    Bs += mode;
+    Cs += mode;
+    Fs += mode;
+    Gs += mode;
+    Sigmas += mode;
+    Ns += mode;
   }
 
   std::string data = (char *) content.data;
 
-  if (A.compare(content.name) == 0 ) 
+  if (As.compare(content.name) == 0 )
   {
-    init.A = init.fillMatrix(init, content);
-  } 
-  else if (B.compare(content.name) == 0) 
-  {
-    init.B = init.fillMatrix(init, content);
-  } 
-  else if (C.compare(content.name) == 0) 
-  {
-    init.C = init.fillMatrix(init, content);
-  } 
-  else if (F.compare(content.name) == 0) 
-  {
-    init.F = init.fillMatrix(init, content);
-  } 
-  else if (Q.compare(content.name) == 0) 
-  {
-    init.Q = init.fillMatrix(init, content);
-  } 
-  else if (Sigma.compare(content.name) == 0) 
-  {
-    init.sigma = init.fillMatrix(init, content);
-  } 
-  else if (N.compare(content.name) == 0) 
-  {
-    init.N = init.fillMatrix(init, content);
-  } 
-  else if (dim.compare(content.name) == 0) 
-  {
-    init.x_dim = std::stoi(data);	    
-  } 
-  else if (ddim.compare(content.name) == 0) 
-  {
-    init.d_dim = std::stoi(data);	    
-  } 
-  else if (udim.compare(content.name) == 0) 
-  {
-    init.u_dim = std::stoi(data);	    
-  }
-  else if (dt.compare(content.name) == 0) 
-  {
-    init.delta_t = std::stod(data);	        
-  }
+		A = std::make_optional(fillMatrix(content));
+	}
+	else if (Bs.compare(content.name) == 0)
+	{
+		B = std::make_optional(fillMatrix(content));
+	}
+	else if (Cs.compare(content.name) == 0)
+	{
+		C = std::make_optional(fillMatrix(content));
+	}
+	else if (Fs.compare(content.name) == 0)
+	{
+		F = std::make_optional(fillMatrix(content));
+	}
+	else if (Gs.compare(content.name) == 0)
+	{
+		G = std::make_optional(fillMatrix(content));
+	}
+	else if (Sigmas.compare(content.name) == 0)
+	{
+		Sigma = std::make_optional(fillMatrix(content));
+	}
+	else if (Ns.compare(content.name) == 0)
+	{
+		N = std::make_optional(fillMatrix(content));
+	}
+	else if (dt.compare(content.name) == 0)
+	{
+		delta_t = std::stod(data);
+	}
+
+  // Note
+	std::cout << " Populated state space model for abstraction using mat file"  << std::endl;
 }
 
-/// Update ssmodel based on input data read from arma::mat file
-// 1. populate state space based on variable name
-//  2. Check if dimensions match
-//
-void ssmodels_t::populate(ssmodels_t &init, matvar_t &content) 
-{
-  // For Tq check type for hybrid systems guards are sorted in cell type
-  // For stochastic systems unless Tq is function of state, Tq is
-  // given in form of numeric matrix and one has to check for
-  // stochasticity
-
-  populate(init, content, 0); 
-}
-
-
-void ssmodels_t::populateBMDP(ssmodels_t &init, matvar_t &content, int curMode)
-{
-  // For Tq check type for hybrid systems guards are sorted in cell type
-  // For stochastic systems unless Tq is function of state, Tq is
-  // given in form of numeric matrix and one has to check for
-  // stochasticity
-  std::string A("A"), B("B"), F("G"), Sigma("sigma"), N("N");
-
-  std::string mode = std::to_string(curMode);
-  A += mode;
-  B += mode;
-  F += mode;
-  Sigma += mode;
-  N += mode;
-
-  if (A.compare(content.name) == 0)
-  {
-    init.A = init.fillMatrix(init, content);
-  } 
-  else if (B.compare(content.name) == 0)
-  {
-    init.B = init.fillMatrix(init, content);
-  } 
-  else if (F.compare(content.name) == 0)
-  {
-    init.F = init.fillMatrix(init, content);
-  } 
-  else if (Sigma.compare(content.name) == 0) 
-  {
-    init.sigma = init.fillMatrix(init, content);
-  }
-  else if (N.compare(content.name) == 0) 
-  {
-    init.N = init.fillMatrix(init, content);
-  }
-}
-
-/// Fill state space matrices from corresponding variable
-//  in .arma::mat file
-//  matio reads matrices in the form of 2D arrays
-// /
-arma::mat ssmodels_t::fillMatrix(ssmodels_t &init, matvar_t &content) 
+// Fill state space matrices from corresponding variable
+// in mat file
+// Note: matio reads matrices in the form of 2D arrays
+arma::mat ssmodels_t::fillMatrix(matvar_t &content)
 {
   size_t stride = Mat_SizeOf(content.data_type);
   char *data = (char *)content.data;
   arma::mat mt(content.dims[0], content.dims[1]);
   unsigned i, j = 0;
-  for (i = 0; i < content.dims[0] && i < 15; i++) 
+  for (i = 0; i < content.dims[0] && i < 15; i++)
   {
-    for (j = 0; j < content.dims[1] && j < 15; j++) 
+    for (j = 0; j < content.dims[1] && j < 15; j++)
     {
       size_t idx = content.dims[0] * j + i;
       char str[64];
@@ -491,24 +317,29 @@ arma::mat ssmodels_t::fillMatrix(ssmodels_t &init, matvar_t &content)
   return mt;
 }
 
-/// Read contents from .arma::mat file of type cell
+/// Read contents from mat file of type cell
 // This is used for Tq when in hybrid mode
-//
-std::string ssmodels_t::readCells(matvar_t &content) {
+std::string ssmodels_t::readCells(matvar_t &content)
+{
   std::string str;
 
-  try {
+  try
+  {
     matvar_t *cell;
     unsigned int i, j, k = 0;
     // Get all the cells
-    for (i = 0; i < content.dims[0] * content.dims[1]; i++) {
+    for (i = 0; i < content.dims[0] * content.dims[1]; i++)
+    {
       cell = Mat_VarGetCell(&content, i);
       char *data = (char *)cell->data;
-      if (NULL == cell) {
-        throw "Error reading 'Tq' variable information";
+      if (NULL == cell)
+      {
+        throw " Error reading 'Tq' variable information";
       }
-      for (k = 0; k < cell->dims[0]; k++) {
-        for (j = 0; j < cell->dims[1]; j++) {
+      for (k = 0; k < cell->dims[0]; k++)
+      {
+        for (j = 0; j < cell->dims[1]; j++)
+        {
           char substr[100];
           sprintf(substr, "%c", data[j * cell->dims[0] + k]);
           str.append(substr);
@@ -516,278 +347,99 @@ std::string ssmodels_t::readCells(matvar_t &content) {
         str.append(" ");
       }
     }
-  } catch (const char *msg) {
+  }
+  catch (const char *msg)
+  {
     std::cerr << msg << std::endl;
     exit(0);
   }
+
   return str;
 }
 
-int ssmodels_t::checkDimFields(int dim, arma::mat mt) {
-  // std::cout << "size" << mt.n_n_cols() << std::endl;
-  if (dim == -1 || (unsigned)dim != (unsigned)mt.n_cols) {
-    dim = mt.n_cols;
-  }
+arma::mat ssmodels_t::getNextStateFromCurrent(arma::mat& x_k,
+                                  std::optional<arma::mat> u_k,
+                                  std::optional<arma::mat> g_k)
+{
+  arma::mat X = x_k; // If we have no model, return original state-space
 
-  return dim;
-}
+  if (delta_t <= 0)
+  {
+    // We are in CT so we need to simulate the stochasticity
+    // Number of simulations to run
+    int monte = x_k.n_cols;
 
-void ssmodels_t::checkModel(ssmodels_t &init) {
-  try {
-    if (init.u_dim != 0 && init.B.size() == 1 && init.u_dim != 1) {
-      init.u_dim = 0;
-    }
-    init.d_dim = checkDimFields(init.d_dim, init.F);
-    if (init.d_dim != 0 && init.F.size() == 1 && init.x_dim != 1) {
-      init.d_dim = 0;
-    }
-    if (checkMatrices(init.A.size(), init.x_dim, init.x_dim) == 1) {
-      throw "Incorrect dimensions of A-matrix";
-    }
-    if (checkMatrices(init.B.size(), init.x_dim, init.u_dim) == 1 &&
-        init.u_dim != 0) {
-      if (init.u_dim == 0 || init.u_dim == -1) {
-        init.B.reset();
-      } else {
-        throw "Incorrect dimensions of B-matrix";
+    // Simulate Weiner process
+    std::random_device rand_dev;
+    std::mt19937 generator(rand_dev());
+    std::uniform_real_distribution<double> norm(0, 1);
+    arma::mat dW = arma::zeros<arma::mat>(x_k.n_rows, monte);
+
+    for(size_t j = 0; j < monte; j++)
+    {
+      for (size_t i= 0; i < x_k.n_rows; i++)
+      {
+        dW(i,j) = sqrt(1) * norm(generator); // Weiner increment
       }
     }
-    double nr = init.C.n_cols;
-    double nc = init.C.n_rows;
-    double a = arma::accu((init.C == arma::zeros<arma::mat>(nr, nc)));
-    if ((checkMatrices(nr, nc, 1) == 1) && (a == 0)) {
-      throw "Incorrect dimensions of C-matrix";
+
+    arma::mat sigma = arma::eye(x_k.n_rows, x_k.n_rows);
+    if (Sigma.has_value())
+    {
+      sigma = Sigma.value();
     }
-    if (checkMatrices(init.F.size(), init.x_dim, init.d_dim) == 1) {
-      if (init.d_dim == 0 || init.d_dim == -1) {
-        init.F.reset();// = arma::zeros<arma::mat>(x_dim, 1);
-      } else {
-        throw "Incorrect dimensions of F-matrix";
+    else
+    {
+      std::cout << "Sigma matrix not specified setting to identity matrix " << std::endl;
+    }
+
+    X += sigma * dW;
+  }
+
+  // determine model type
+  if (A.has_value())
+  {
+    X = A.value()*x_k;
+
+    if (F.has_value())
+    {
+      X += F.value();
+    }
+  }
+
+  if (!(u_k.has_value()) && !(g_k.has_value()))
+  {
+    return X;
+  }
+  else if(u_k.has_value() && !(g_k.has_value()))
+  {
+    if (B.has_value())
+    {
+      X +=  B.value()*u_k.value();
+
+      if (N.has_value())
+      {
+        X += N.value() * kron(u_k.value().col(0), x_k);
       }
-    }
-    if (checkMatrices(init.Q.size(), init.x_dim, 1) == 1) {
-      if (init.Q.size() == 1 && init.x_dim != 1) {
-        init.Q = arma::zeros<arma::mat>(x_dim, 1);
-      }
-    }
-    if (checkMatrices(init.sigma.size(), init.x_dim, init.x_dim) == 1) {
-      if (init.sigma.size() == 1 && init.x_dim != 1) {
-        init.sigma = arma::zeros<arma::mat>(x_dim, 1);
-      } else {
-        throw "Incorrect dimensions of Sigma-matrix";
-      }
-    }
-    std::cout << "Correctly compiled state space model" << std::endl;
-    //		init.printmodel(init);
-  } catch (const char *msg) {
-    std::cerr << msg << std::endl;
-    exit(0);
-  }
-}
 
-int ssmodels_t::checkMatrices(int size, int rows, int n_cols) {
-  int error = 0;
-  if (size != rows * n_cols) {
-    error = 1;
-  }
-  return error;
-}
-
-void ssmodels_t::printmodel(ssmodels_t &init) {
-  std::cout << "------------------------------------" << std::endl;
-  std::cout << "Dimensions:   " << std::endl;
-  std::cout << "------------------------------------" << std::endl;
-  std::cout << "# Continuous variables: " << init.x_dim << std::endl;
-  std::cout << "# Inputs: " << init.u_dim << std::endl;
-  std::cout << "# Disturbances: " << init.d_dim << std::endl;
-  std::cout << "------------------------------------" << std::endl;
-  std::cout << "State space model: " << std::endl;
-  std::cout << "delta_t: " << init.delta_t << std::endl;
-  std::cout << "sigma : " << init.sigma << std::endl;
-  if (init.delta_t == 0) {
-    double lhs = arma::accu(init.sigma ==
-                            arma::zeros<arma::mat>(init.x_dim, init.x_dim));
-    if (lhs > 0) {
-      std::cout << "dot(x(t)) = Ax(t)+Bu(t)+ Dd(t) + F" << std::endl;
-      std::cout << "------------------------------------" << std::endl;
-    } else {
-      std::cout << "dot(x(t)) = (Ax(t)+Bu(t)+ Qd(t) + F)dt + sigmadW"
-                << std::endl;
-      std::cout << "------------------------------------" << std::endl;
+      return X;
     }
-  } else {
-    double lhs = arma::accu(init.sigma ==
-                            arma::zeros<arma::mat>(init.x_dim, init.x_dim));
-    if (lhs > 0) {
-      std::cout << "x[k+1] = Ax[k]+Bu[k]+ Dd[k] + F" << std::endl;
-      std::cout << "Sampling time: " << init.delta_t << std::endl;
-      std::cout << "------------------------------------" << std::endl;
-    } else {
-      if (init.N.is_empty()) {
-        std::cout << "x[k+1] = Ax[k]+Bu[k]+ Fd[k] + F + sigmaW[k]" << std::endl;
-        std::cout << "Sampling time: " << init.delta_t << std::endl;
-        std::cout << "------------------------------------" << std::endl;
-      } else {
-        std::cout << "x[k+1] = Ax[k]+Bu[k]+ N(u[k] (x) x[k])  + F + sigmaW[k]"
-                  << std::endl;
-        std::cout << "Sampling time: " << init.delta_t << std::endl;
-        std::cout << "------------------------------------" << std::endl;
-      }
+    else
+    {
+      std::cout << " Given an input signal, but have no B matrix, ignoring input " << std::endl;
     }
   }
-
-  std::cout << "A: " << std::endl;
-  std::cout << init.A << std::endl;
-  std::cout << "B: " << std::endl;
-  std::cout << init.B << std::endl;
-  std::cout << "C: " << std::endl;
-  std::cout << init.C << std::endl;
-  std::cout << "N :" << std::endl;
-  std::cout << init.N << std::endl;
-  std::cout << "F: " << std::endl;
-  std::cout << init.F << std::endl;
-  std::cout << "Q: " << std::endl;
-  std::cout << init.Q << std::endl;
-  std::cout << "Sigma: " << std::endl;
-  std::cout << init.sigma << std::endl;
-}
-
-ssmodels_t::~ssmodels_t() {}
-
-arma::mat ssmodels_t::updateLTI(ssmodels_t &old, arma::mat x_k, arma::mat u_k) {
-  arma::mat X = arma::zeros<arma::mat>((double)x_k.n_rows, 1);
-  if (old.B.is_empty() && old.Q.is_empty()) {
-    X = old.A * x_k;
-  }
-  else if(old.B.is_empty() && !old.Q.is_empty()){
-    X = old.A*x_k + old.Q;
-  }
-  else {
-    X = old.A * x_k + old.B * u_k + old.Q;
-  }
-  // Update x_k
-  return X;
-}
-
-arma::mat ssmodels_t::updateLTI(arma::mat A, arma::mat B, arma::mat Q,
-                                arma::mat x_k, arma::mat u_k) {
-  arma::mat X(1, 1);
-
-  if (B.is_empty() && Q.is_empty()) {
-    X = A * x_k;
-  }
-  else if(B.is_empty() && !Q.is_empty()){
-    X = A*x_k + Q;
-  }
-  else {
-    X = A * x_k + B * u_k + Q;
-  }
-  // Update x_k
-  return X;
-}
-
-arma::mat ssmodels_t::updateLTI(arma::mat A, arma::mat Q, arma::mat x_k) {
-  arma::mat X(1, 1);
-  X = A * x_k + Q;
-
-  return X;
-}
-
-arma::mat ssmodels_t::updateLTIad(ssmodels_t &old, arma::mat x_k, arma::mat u_k,
-                                  arma::mat d_k) {
-  arma::mat X(old.x_dim, 1);
-  if (old.B.is_empty() && old.Q.is_empty()) {
-    X = old.A * x_k + old.F * d_k;
-  }
-  else if(old.B.is_empty() && !old.Q.is_empty()){
-    X = old.A*x_k  + old.F * d_k + old.Q;
-  }
-  else {
-    X = old.A * x_k + old.B * u_k + old.F * d_k + old.Q;
-  }
-  // Update x_k
-  return X;
-}
-
-arma::mat ssmodels_t::updateLTIad(arma::mat A, arma::mat B, arma::mat F,
-                                  arma::mat Q, arma::mat x_k, arma::mat u_k,
-                                  arma::mat d_k) {
-  arma::mat X(1, 1);
-  if (B.is_empty() && Q.is_empty()) {
-    X = A * x_k + F * d_k;
-  }
-  else if(B.is_empty() && !Q.is_empty()){
-    X = A*x_k  + F * d_k + Q;
-  }
-   else {
-    X = A * x_k + B * u_k + F * d_k + Q;
-  }
-  // Update x_k
-  return X;
-}
-
-arma::mat ssmodels_t::updateLTIst(ssmodels_t &old, arma::mat x_k, arma::mat u_k,
-                                  arma::mat d_k) {
-  size_t monte = x_k.n_cols;
-  arma::mat X(x_k.n_rows, monte);
-  arma::mat Q = old.Q;
-
-  std::random_device rand_dev;
-  std::mt19937 generator(rand_dev());
-  std::uniform_real_distribution<double> norm(0, 1);
-  double nr = old.sigma.n_cols;
-  arma::mat dW = arma::zeros<arma::mat>(nr, monte);
-  for(size_t j = 0; j < monte; j++){
-    for (size_t i= 0; i < old.sigma.n_cols; i++) {
-      dW(i,j) = sqrt(1) * norm(generator); // Weiner increment
+  else
+  {
+    if (G.has_value())
+    {
+      X +=  G.value()*g_k.value();
+      return X;
     }
-  }
-
-  if(!old.Q.is_empty()){
-    Q = arma::repmat(old.Q, 1,monte);
-  }
-  if (u_k.is_empty() && d_k.is_empty() && old.Q.is_empty() ) {
-    X = old.A * x_k + old.sigma * dW;
-  } else if(u_k.is_empty()  && !d_k.is_empty() && old.Q.is_empty()) {
-    X = old.A * x_k + old.F * d_k + old.sigma * dW;
-  }
-  else if(u_k.is_empty()  && d_k.is_empty() && !old.Q.is_empty()) {
-    X = old.A * x_k + old.B * u_k + old.F * d_k + old.sigma * dW;
-  }
-  else if(u_k.is_empty()  && !d_k.is_empty() && !old.Q.is_empty()) {
-    X = old.A * x_k + old.Q + old.sigma * dW;
-  }
-  else if(!u_k.is_empty()  && !d_k.is_empty() && !old.Q.is_empty()) {
-    if(old.F.n_rows == d_k.n_cols){
-      d_k = d_k.t();
+    else
+    {
+      std::cout << " Given an disturbance signal, but have no G matrix, ignoring input" << std::endl;
     }
-    if(old.B.n_rows == u_k.n_cols){
-      u_k = u_k.t();
-    }
-    X = old.A * x_k + old.B * u_k + old.F * d_k + Q + old.sigma * dW;
-  }
-  else if(!u_k.is_empty()  && d_k.is_empty() && !old.Q.is_empty()) {
-    X = old.A * x_k + old.B * u_k + Q + old.sigma * dW;
-  }
-  else if(!u_k.is_empty()  && d_k.is_empty() && old.Q.is_empty()) {
-    X = old.A * x_k + old.B * u_k + old.sigma * dW;
-  }
-  else {
-    X = old.A * x_k + old.B * u_k + old.F * d_k + old.sigma * dW;
-  }
-  return X;
-}
-arma::mat ssmodels_t::updateBi(arma::mat A, arma::mat B, arma::mat N,
-                               arma::mat Q, arma::mat x_k, arma::mat u_k) {
-  arma::mat X(x_k.n_cols, 1);
-  arma::mat temp = arma::ones<arma::mat>(1, x_k.n_cols);
-
-  if(Q.is_empty()) {
-    X = A * x_k + B * u_k * temp + N * kron(u_k.col(0), x_k);
-  }
-  else{
-    X = A * x_k + B * u_k * temp + N * kron(u_k.col(0), x_k) + Q * temp;
-
   }
 
   return X;

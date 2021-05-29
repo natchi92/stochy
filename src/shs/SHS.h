@@ -18,137 +18,41 @@ public:
   T2 Q;  // Discrete modes
   T Tq;  // Discrete kernel- can represent either guards or probabilities
   int n; // Dimension of continuous state space in given mode
-  arma::mat p_k;
-  arma::mat q_0;                 // Modes
+  std::optional<arma::mat> p_k;
+  std::optional<arma::mat> q_0;  // Modes
   std::vector<ssmodels_t> x_mod; // container of models
-  exdata_t x_data;
+  std::optional<exdata_t> x_data;
 
 private:
   bool shs; // 1- SHS, 0- HS
 public:
-  shs_t() {
-    n = 1; // Dimension of continuous state space in given mode
-    p_k = arma::mat(Q, n);
-    q_0 = arma::mat(Q, 1); // Initial mode
-    std::vector<ssmodels_t> x_mod;
-    // Q = 1; // Discrete modes
-    shs = 1;
-    exdata_t x_data;
-    std::vector<T> Tq;
+  shs_t()
+      : n{1}, p_k{std::nullopt}, q_0{std::nullopt}, shs{false},
+        x_data{std::nullopt} {}
+  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &current,
+        exdata_t &data)
+      : Q{disc}, n{num}, p_k{data.InitTq[0]}, q_0{data.q_init[0]},
+        x_mod{current}, x_data{data}, Tq{tq}, shs{false} {
+    shs = !current[0].sigma.is_empty();
   }
 
-  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
+  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &current)
+      : Q{disc}, n{num}, p_k{std::nullopt}, q_0{std::nullopt}, x_mod{current},
+        x_data{std::nullopt}, Tq{tq}, shs{false} {
+    shs = !current[0].sigma.is_empty();
+  }
+
+  shs_t(T tq, std::vector<ssmodels_t> &current, exdata_t &data)
+      : Q{1}, x_mod{current}, x_data{data}, Tq{tq} {
+    n = current[0].x_dim; // Dimension of continuous state space in given mode
     p_k = data.InitTq[0];
     q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    shs = old[0].sigma.is_empty() ? 0 : 1;
-
-    // Check dimensions of data
-    int err = this->checkData();
-    switch (err) {
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-      break;
-    }
-    default: {
-      std::cout << "Correct input vectors size" << std::endl;
-      break;
-    }
-    }
-  }
-
-  shs_t(T2 disc, int num, T tq, std::vector<ssmodels_t> &old) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
-    p_k = arma::zeros<arma::mat>(1, 1);
-    q_0 = arma::zeros<arma::mat>(1, 1); // Initial mode
-
-    p_k.empty();
-    q_0.empty();
-
-    x_mod = old;
-    x_data = new exdata_t;
-    Tq = tq;
-    shs = old[0].sigma.is_empty() ? 0 : 1;
-  }
-
-  shs_t(T2 disc, int num, std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
-    p_k = data.InitTq[0];
-    q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = arma::zeros<arma::mat>(1, 1);
-    shs = old[0].sigma.is_empty() ? 0 : 1;
-
-    // Check dimensions of data
-    int err = this->checkData();
-    switch (err) {
-    case 2: {
-      std::cout << "Incorrect size of input vector" << std::endl;
-      break;
-    }
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-      break;
-    }
-    default: {
-      std::cout << "Correct input vectors size" << std::endl;
-      break;
-    }
-    }
-  }
-
-  shs_t(T tq, std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = 1;            // Discrete modes
-    n = old[0].x_dim; // Dimension of continuous state space in given mode
-    p_k = data.InitTq[0];
-    q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    shs = old[0].sigma.is_empty() ? 0 : 1;
-
-    // Check dimensions of data
-    int err = this->checkData();
-    switch (err) {
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-      break;
-    }
-    default: {
-      std::cout << "Correct input vectors size" << std::endl;
-      break;
-    }
-    }
+    shs = !current[0].sigma.is_empty();
   }
   virtual ~shs_t() {}
-
-private:
-  int checkData() {
-    int error = 0;
-    if (this->x_mod[0].x_dim != this->x_data.X[0].n_rows) {
-      error = 1;
-    }
-    if (this->x_mod[0].u_dim != this->x_data.U.n_cols &&
-        this->x_mod[0].u_dim > 0) {
-      error = 2;
-    }
-    if (this->x_mod[0].d_dim != this->x_data.D.n_cols &&
-        this->x_mod[0].d_dim > 0) {
-      error = 3;
-    }
-    return error;
-  }
 };
 
 /*************************************************************************************************/
-
 // class template specialisation
 // for the case when have a hybrid model and the transitions are governed by
 // logical guards not probabilities
@@ -158,285 +62,172 @@ public:
   std::vector<std::string>
       Tq; // Discrete kernel- can represent either guards or probabilities
   int n;  // Dimension of continuous state space in given mode
-  std::vector<arma::mat> p_k;
-  arma::mat q_0;                 // Modes
+  std::optional<std::vector<arma::mat>> p_k;
+  std::optioncal<arma::mat> q_0; // Modes
   std::vector<ssmodels_t> x_mod; // container of models
-  exdata_t x_data;
+  std::optional<exdata_t> x_data;
 
 public:
-  shs_t() {
-    n = 1; // Dimension of continuous state space in given mode
-    p_k = {arma::mat(Q, n)};
-    q_0 = arma::mat(Q, 1); // Initial mode
-    std::vector<ssmodels_t> x_mod;
-    Q = 1; // Discrete modes
-    exdata_t x_data;
-    Tq = {" "};
-  }
+  shs_t()
+      : Q{1}, n{1}, p_k{std::nullopt}, q_0{std::nullopt}, x_data{std::nullopt},
+        Tq{" "} {}
+
   shs_t(int disc, int num, std::vector<std::string> tq,
-        std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
+        std::vector<ssmodels_t> &current, exdata_t &data)
+      : Q{disc}, n{num}, x_mod{current}, x_data{data}, Tq{tq} {
     p_k = {data.InitTq[0]};
     q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    // Check dimensions of data
-    int err = this->checkData();
-    switch (err) {
-    case 2: {
-      std::cout << "Incorrect size of input vector" << std::endl;
-    }
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-    }
-    default: {
-      std::cout << "Correct input vectors size" << std::endl;
-    }
-    }
   }
-  shs_t(std::vector<std::string> tq, std::vector<ssmodels_t> &old,
-        exdata_t &data) {
-    Q = 1;            // Discrete modes
-    n = old[0].x_dim; // Dimension of continuous state space in given mode
+  shs_t(std::vector<std::string> tq, std::vector<ssmodels_t> &current,
+        exdata_t &data)
+      : Q{1}, x_mod{current}, x_data{data}, Tq{tq} {
+    n = current[0].x_dim; // Dimension of continuous state space in given mode
     p_k = {data.InitTq[0]};
     q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    // Check dimensions of data
-    int err = this->checkData();
-    switch (err) {
-    case 2: {
-      std::cout << "Incorrect size of input vector" << std::endl;
-    }
-    case 3: {
-      std::cout << "Incorrect size of disturbance vector" << std::endl;
-    }
-    default: {
-      std::cout << "Correct input vectors size" << std::endl;
-    }
-    }
   }
-  shs_t(const char *fn, exdata_t &data) {
+
+  shs_t(const char *fn, std::optional<exdata_t> &data) : x_data{data} {
     // Obtain number of discrete modes and obtain Tq
-    bool error = this->obtainTqfromMat(fn, *this);
-    if (!error) {
-      Q = this->Q;
-      Tq = this->Tq;
+    if (!obtainTqfromMat(fn)) {
       // Get transition probabilities associated with the guards
       // and store in pk
-      p_k = {arma::mat(Q, Q)}; // obtainpk(*this);
-
-      x_data = data;
-      //  p_k = data.InitTq;
-      q_0 = data.q_init[0]; // Initial mode
+      p_k = {arma::mat(Q, Q)};                                   // obtainpk();
+      q_0 = data.has_value() ? (*data).q_init[0] : std::nullopt; // Initial mode
       // create array containing the ssmodels
       std::vector<ssmodels_t> models;
-      arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
       for (int i = 1; i <= Q; i++) {
-        int x_dimension = data.x_k.n_rows;
-        int u_dimension = data.u_k.n_rows;
-        int d_dimension = data.d_k.n_rows;
-        double lhs = arma::accu(data.u_k == dummy);
-        double rhs = arma::accu(data.d_k == dummy);
-        if ((lhs > 0) && (rhs > 0)) {
-          u_dimension = 0;
-          d_dimension = 0;
-        } else if ((lhs > 0) && (rhs < 0)) {
-          u_dimension = 0;
-        }
-        ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-
-        // Reading models
         std::cout
             << "Initialising model of continuous variables in discrete mode "
             << i << std::endl;
-        mod.obtainSSfromMat(fn, mod, i);
-        if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-            (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-          mod.obtainSSfromMat(fn, mod);
-        }
+        ssmodels_t mod;
+        mod.obtainSSfromMat(fn, i);
         mod.checkModel(mod);
         models.push_back(mod);
       }
       x_mod = models;
       n = models[0].x_dim;
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        std::cout << "Incorrect size of disturbance vector" << std::endl;
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
     }
-  }
-  shs_t(const char *fn) {
-    // Obtain number of discrete modes and obtain Tq
-    this->obtainTqfromMat(fn, *this);
-    Q = this->Q;
-    Tq = this->Tq;
-    // Get transition probabilities associated with the guards
-    // and store in pk
-    p_k = {arma::mat(Q, Q)}; // obtainpk(*this);
-
-    // create array containing the ssmodels
-    std::vector<ssmodels_t> models;
-    arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
-    for (int i = 1; i <= Q; i++) {
-      int x_dimension = this->x_mod[0].A.n_rows;
-      int u_dimension = this->x_mod[0].B.n_rows;
-      int d_dimension = this->x_mod[0].F.n_rows;
-      ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-
-      // Reading models
-      std::cout
-          << "Initialising model of continuous variables in discrete mode " << i
-          << std::endl;
-      mod.obtainSSfromMat(fn, mod, i);
-      if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-          (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-        mod.obtainSSfromMat(fn, mod);
-      }
-      mod.checkModel(mod);
-      models.push_back(mod);
-    }
-    x_mod = models;
-    n = models[0].x_dim;
   }
 
   virtual ~shs_t() {}
-  void step_hyb(shs_t &old, int n, int cond) {
+  void step_hyb(int n, int cond) {
     // TODO: Update to cater for multiple discrete modes
-    int xdim = old.n;
-    // arma::mat x_old=arma::mat(old.x_mod[(int) old.q_0(n,0)].x_dim,1);
-    // x_old = old.x_data.X[n];
-    arma::mat x_old(old.x_data.X[n]);
+    int xdim = n;
+
+    arma::mat x_current = x_data.X[xdim];
     arma::mat x_new = arma::mat(xdim, 1);
 
-    double q_old = old.q_0(n, 0);
-    double q_new = q_old;
-    // std::vector<double> vec(x_old.size());
-    // arma::mat x_old(vec);
-    // Eigen::Map<arma::mat>(vec.data(), x_old.n_rows, x_old.n_cols) =x_old;
-    // //TODO fix
+    double q_current = q_0(n, 0);
+    double q_new = q_current;
 
-    arma::mat u_old = arma::mat(old.x_mod[(int)old.q_0(n, 0)].u_dim, 1);
-    u_old = old.x_data.u_k;
-    arma::mat d_old = arma::mat(old.x_mod[(int)old.q_0(n, 0)].d_dim, 1);
-    d_old = old.x_data.d_k;
+    arma::mat u_current = x_data.u_k;
+    arma::mat d_current = x_data.d_k;
 
-    double curMode = q_old;
+    double curMode = q_current;
     std::cout << "Current mode: " << curMode << std::endl;
-    std::cout << "Current temp: " << x_old << std::endl;
+    std::cout << "Current temp: " << x_current << std::endl;
 
-    if (old.Q > 1) {
+    if (Q > 1) {
       // Get discrete transition
       // Number of symbolic variables needed
-      int kmax = old.NumSymbols(old);
-      std::vector<std::string> x = old.Tq;
+      int kmax = NumSymbols(current);
+      std::vector<std::string> x = Tq;
       // Generate list of symbols depending on
       // kmax, check type of guards whether simply a function of
       // x or is also of u and d
-      GiNaC::lst syms = this->generateListofSymbols(x[kmax]);
+      GiNaC::lst syms = generateListofSymbols(x[kmax]);
 
       // For each transition from current mode, generate guard
       // Check if take guard or stay
       double index = curMode;
       double updated = 0;
-      while (index < pow(old.Q, 2) && old.Q > 1) {
+      while (index < pow(Q, 2)) {
         std::cout << "Tq" << x[index] << std::endl;
-        bool guard = this->getCurrentGuard(x[index], x_old, syms);
+        bool guard = getCurrentGuard(x[index], x_current, syms);
         if (guard && !updated) {
-          // q_new = std::floor(index/old.Q);
-          std::cout << "prob:" << old.p_k[0] << std::endl;
-          std::cout << "q-old:" << q_old << std::endl;
+          std::cout << "prob:" << p_k[0] << std::endl;
+          std::cout << "q-current:" << q_current << std::endl;
 
-          std::vector<int> q = t_q(old, q_old, 0);
+          std::vector<int> q = t_q(q_current, 0);
           std::cout << "q" << q[0] << " " << q[1] << std::endl;
           q_new = q[1];
-          std::cout << "q_new: " << q_new
-                    << std::endl; //<< "index+1: "<< index+1
-          updatepk(old, index);
+          std::cout << "q_new: " << q_new << std::endl;
+          updatepk(index);
           updated = 1;
         }
-        index += old.Q;
+
+        index += Q;
       }
     }
-    if (old.x_mod[(int)q_old].d_dim == 0) {
-      x_new =
-          old.x_mod[(int)q_new].updateLTI(old.x_mod[(int)q_old], x_old, u_old);
+    if (x_mod[(int)q_current].d_dim == 0) {
+      x_new = x_mod[(int)q_new].getNextStateFromCurrent(
+          x_mod[(int)q_current], u_current, std::nullopt`);
+
       // TODO Generalise for other models
-      if (((q_old == 0 && q_new == 2) || (q_old == 1 && q_new == 0) ||
-           (q_old == 2 && q_new == 0)) &&
+      if (((q_current == 0 && q_new == 2) || (q_current == 1 && q_new == 0) ||
+           (q_current == 2 && q_new == 0)) &&
           cond) {
         x_new(1, 0) = 0;
       }
     } else {
-      x_new = old.x_mod[(int)q_new].updateLTIad(old.x_mod[(int)q_old], x_old,
-                                                u_old, d_old);
+      x_new = x_mod[(int)q_new].getNextStateFromCurrent(x_mod[(int)q_current],
+                                                        u_current, d_current);
     }
-    old.x_data.x_k = x_new;
-    // Append result to X in old object (columns)
-    old.x_data.X.push_back(x_new);
-    // Append result to Q in old object (columns)
-    old.q_0(n + 1, 0) = q_new;
+    x_data.x_k = x_new;
+    // Append result to X in current object (columns)
+    x_data.X.push_back(x_new);
+    // Append result to Q in current object (columns)
+    q_0(n + 1, 0) = q_new;
   }
 
-  void step_hyb_ad(shs_t &old, int n, int cond, int steps) {
-    arma::mat x_old(old.x_data.X[n]);
-    arma::mat x_new = arma::mat(old.x_mod[(int)old.q_0(n, 0)].x_dim, steps);
-    double q_old = old.q_0(n, 0);
-    double q_new = q_old;
-    arma::mat u_old = arma::mat(old.x_mod[(int)old.q_0(n, 0)].u_dim, 1);
-    u_old = old.x_data.u_k;
-    arma::mat d_old = arma::mat(old.x_mod[(int)old.q_0(n, 0)].d_dim, 1);
-    d_old = old.x_data.d_k;
+  void step_hyb_ad(int n, int cond, int steps) {
+    arma::mat x_current(x_data.X[n]);
+    arma::mat x_new = arma::mat(x_mod[(int)q_0(n, 0)].x_dim, steps);
+    double q_current = q_0(n, 0);
+    double q_new = q_current;
+    arma::mat u_current = arma::mat(x_mod[(int)q_0(n, 0)].u_dim, 1);
+    u_current = x_data.u_k;
+    arma::mat d_current = arma::mat(x_mod[(int)q_0(n, 0)].d_dim, 1);
+    d_current = x_data.d_k;
 
-    if (old.Q == 1) {
-      x_new = old.x_mod[0].updateLTIst(old.x_mod[0], x_old, u_old, d_old);
+    if (Q == 1) {
+      x_new = x_mod[0].getNextStateFromCurrent(x_mod[0], u_current, d_current);
     } else {
       for (int j = 0; j < steps; j++) {
         // Get discrete transition
         // Number of symbolic variables needed
-        int kmax = old.NumSymbols(old);
-        std::vector<std::string> x = old.Tq;
+        int kmax = NumSymbols(current);
+        std::vector<std::string> x = Tq;
         // Generate list of symbols depending on
         // kmax, check type of guards whether simply a function of
         // x or is also of u and d
-        GiNaC::lst syms = this->generateListofSymbols(x[kmax]);
+        GiNaC::lst syms = generateListofSymbols(x[kmax]);
 
         // For each transition from current mode, generate guard
         // Check if take guard or stay
-        double index = q_old;
+        double index = q_current;
 
         double updated = 0;
-        while (index < pow(old.Q, 2) && old.Q > 1) {
-          //  std::cout << "Tq" << x[index] <<std::endl;
-          bool guard = this->getCurrentGuard(x[index], x_old, syms);
+        while (index < pow(Q, 2) && Q > 1) {
+          bool guard = etCurrentGuard(x[index], x_current, syms);
           if (guard && !updated) {
-            std::vector<int> q = t_q(old, q_old, j);
+            std::vector<int> q = t_q(current, q_current, j);
             q_new = q[1];
-            updatepk(old, index, j);
+            updatepk(current, index, j);
             updated = 1;
           }
-          index += old.Q;
+          index += Q;
         }
-        // Append result to Q in old object (columns)
-        old.q_0(n + 1, j) = q_new;
-        x_new.col(j) = old.x_mod[(int)q_new].updateLTIst(
-            old.x_mod[(int)q_old], x_old.col(j), u_old, d_old);
+        // Append result to Q in current object (columns)
+        q_0(n + 1, j) = q_new;
+        x_new.col(j) = x_mod[(int)q_new].getNextStateFromCurrent(
+            x_col(j), u_current, d_current);
       }
     }
-    // Append result to X in old object (columns)
-    old.x_data.X.push_back(x_new);
+    x_data.X.push_back(x_new);
   }
 
-  void run(shs_t &old, int N, int cond, int monte) {
+  void run(int N, int cond, int monte) {
     // Start simulation timers
     clock_t begin, end;
     begin = clock();
@@ -446,22 +237,22 @@ public:
     int i = 0;
     while (i < N) {
       if (i == 0) {
-        old.obtainpk(*this);
+        obtainpk();
       }
-      double a = old.x_mod[(int)old.q_0(i, 0)].sigma.n_rows;
-      double b = old.x_mod[(int)old.q_0(i, 0)].sigma.n_cols;
+      double a = x_mod[(int)q_0(i, 0)].sigma.n_rows;
+      double b = x_mod[(int)q_0(i, 0)].sigma.n_cols;
       if ((a + b) > 3) {
-        old.step_hyb_ad(old, i, cond, monte);
+        step_hyb_ad(i, cond, monte);
       } else {
-        old.step_hyb(old, i, cond);
+        step_hyb(i, cond);
       }
-      if ((unsigned)old.x_data.U.n_cols == (unsigned)N)
-        old.x_data.u_k = old.x_data.U.row(i);
-      if ((unsigned)old.x_data.D.n_cols == (unsigned)N)
-        old.x_data.d_k = old.x_data.D.row(i);
+      if ((unsigned)x_data.U.n_cols == (unsigned)N)
+        x_data.u_k = x_data.U.row(i);
+      if ((unsigned)x_data.D.n_cols == (unsigned)N)
+        x_data.d_k = x_data.D.row(i);
       i++;
     }
-    arma::mat y = old.x_data.X[0].t();
+    arma::mat y = x_data.X[0].t();
 
     end = clock();
     time = (double)(end - begin) / CLOCKS_PER_SEC;
@@ -489,8 +280,8 @@ public:
               << std::endl;
     std::cin >> exportOpt;
     if ((exportOpt.compare(str0) == 0) || (exportOpt.compare(str1) == 0)) {
-      // check if results folder exists:
-      if (checkFolderExists("../results") == -1) {
+      // check if results fcurrenter exists:
+      if (checkFcurrenterExists("../results") == -1) {
         if (mkdir("../results", 0777) == -1) {
           std::cerr << "Error cannot create results directory: "
                     << std::strerror(errno) << std::endl;
@@ -504,20 +295,17 @@ public:
       myfile.close();
       std::string y_name = "../results/y_" + str + ".txt";
       y.save(y_name, arma::raw_ascii);
-      arma::mat q = old.q_0;
+      arma::mat q = q_0;
       std::string q_name = "../results/modes_" + str + ".txt";
       q.save(q_name, arma::raw_ascii);
-      // TODO plotting
-      //      old.createPySimPlots(y, modes, x_dim);
     }
   }
-  bool obtainTqfromMat(const char *fn, shs_t &init) {
-    // Reading model file input in .arma::mat format
+  bool obtainTqfromMat(const char *fn) {
+    // Reading model file input in mat format
     // and storing into ssmodel class
     mat_t *matf;
     matvar_t *matvar, *contents;
     bool error = 0;
-    // Read .arma::mat file
     matf = Mat_Open(fn, MAT_ACC_RDONLY);
     if (matf) // if successful in reading file
     {
@@ -527,80 +315,46 @@ public:
       if (contents == NULL) {
         std::cout << "Variable Tq not found in file" << std::endl;
         std::cout << "Number of modes set to 1" << std::endl;
-        init.Q = 1;
+        Q = 1;
       } else {
-        init.populateTq(*contents);
-        // Mat_VarFree(matvar);
+        populateTq(*contents);
         matvar = NULL;
         contents = NULL;
       }
       Mat_Close(matf);
 
-    } else // unsuccessfull in opening file
-    {
-      return 1; // throw "Error opening mat file";
+    } else {
+      return 1;
     }
   }
-  void obtainpk(shs_t &init) {
+  void obtainpk() {
     // Traverse Tq and get equialent probability matrix
     double index = 0;
-    std::vector<std::string> str = init.Tq;
+    std::vector<std::string> str = Tq;
+    arma::mat p = arma::mat(Q, Q);
 
-    arma::mat p = arma::mat(init.Q, init.Q);
     for (int j = 0; j < init.Q; j++) {
       for (int k = 0; k < init.Q; k++) {
         std::vector<std::string> spl = splitStr(str[index], ':');
         if (spl.size() == 1) {
           p(k, j) = 0;
-
         } else {
           p(k, j) = stod(spl[0]);
-          init.Tq[index] = spl[1];
+          Tq[index] = spl[1];
         }
         index += 1;
       }
     }
     p = checkStochasticity(p);
-    std::cout << p << std::endl;
-    for (unsigned int i = 0; i < init.p_k.size(); i++) {
-      init.p_k[i] = p;
+    for (unsigned int i = 0; i < p_k.size(); i++) {
+      p_k[i] = p;
     }
   }
-  void updatepk(shs_t &init, int currentGuardindex) {
-    // Traverse Tq and get equialent probability matrix
-    std::vector<std::string> str = init.Tq;
-    arma::mat p = init.p_k[0];
-    int row = currentGuardindex % init.Q;
-    std::cout << "row : " << row << std::endl;
-    int col = (int)currentGuardindex / init.Q;
-    std::cout << "col: " << col << std::endl;
-    int found1 = -1;
-    for (unsigned j = 0; j < p.n_cols; j++) {
-      if (p(row, j) == 1) {
-        found1 = j;
-      }
-    }
-    if (found1 != -1) {
-      p(row, found1) = 0;
-      p(row, col) = 1;
-    }
-
-    std::cout << "p: " << p << std::endl;
-    p = checkStochasticity(p);
-    std::cout << p << std::endl;
-
-    init.p_k[0] = p;
-  }
-  void updatepk(shs_t &init, int currentGuardindex, int step) {
+  void updatepk(int currentGuardindex, int step) {
     // Traverse Tq and get equivalent probability matrix
-    std::vector<std::string> str = init.Tq;
-    arma::mat p = init.p_k[step];
-    int row = currentGuardindex % init.Q;
-    std::cout << "row : " << row << std::endl;
-    int col = (int)(currentGuardindex) / init.Q;
-    std::cout << "col: " << col << std::endl;
-    std::cout << "p: " << p << std::endl;
-
+    arma::mat p = p_k[step];
+    int row = currentGuardindex % Q;
+    int col = (int)(currentGuardindex) / Q;
     int found1 = -1;
     for (unsigned j = 0; j < p.n_cols; j++) {
       if (p(row, j) == 1) {
@@ -611,13 +365,9 @@ public:
       p(row, found1) = 0;
       p(row, col) = 1;
     }
-
-    std::cout << "p: " << p << std::endl;
-    p = checkStochasticity(p);
-    std::cout << p << std::endl;
-
-    init.p_k[step] = p;
+    p_k[step] = checkStochasticity(p);
   }
+  void updatepk(int currentGuardindex) { updatepk(currentGuardindex, 0); }
 
 private:
   GiNaC::symbol &get_symbol(const std::string &s) {
@@ -724,7 +474,7 @@ private:
   // Function to determine the type of guard
   // and output the lhs and rhs conditions
   //
-  bool getCurrentGuard(std::string x, arma::mat x_old, GiNaC::lst syms) {
+  bool getCurrentGuard(std::string x, arma::mat x_current, GiNaC::lst syms) {
     std::vector<bool> guard = {};
     std::vector<std::string> y;
     std::vector<std::string> y0;  /// = splitStr(x,'&');
@@ -759,7 +509,7 @@ private:
         logOR = false;
       }
       for (int j = 0; j < steps; j++) {
-        std::cout << "xold" << x_old(j, 0) << std::endl;
+        std::cout << "xcurrent" << x_current(j, 0) << std::endl;
 
         std::vector<std::string> y1 = splitStr(xnew[j], '=');
         std::vector<std::string> y2 = splitStr(xnew[j], '>');
@@ -854,11 +604,11 @@ private:
             GiNaC::ex lhs;
             GiNaC::ex rhs;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back((lhs == rhs));
             break;
@@ -869,11 +619,11 @@ private:
             GiNaC::ex lhs;
             GiNaC::ex rhs;
             if (x1y2exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back(lhs > rhs);
             break;
@@ -884,11 +634,11 @@ private:
             GiNaC::ex lhs;
             GiNaC::ex rhs;
             if (x1y3exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back(lhs < rhs);
             break;
@@ -903,13 +653,13 @@ private:
             GiNaC::ex rhs;
             GiNaC::ex b;
             if (x1y2exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
-              b = ex3.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
-              b = ex3.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
             }
 
             guard.push_back((lhs > rhs) || (rhs > b));
@@ -923,13 +673,13 @@ private:
             GiNaC::ex rhs;
             GiNaC::ex b;
             if (x1y3exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
-              b = ex3.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
-              b = ex3.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back((lhs < rhs) || (rhs < b));
             break;
@@ -942,11 +692,11 @@ private:
             GiNaC::ex lhs;
             GiNaC::ex rhs;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             int where = x.find('x');
             int mid = x.length() / 2;
@@ -964,12 +714,12 @@ private:
             GiNaC::ex lhs;
             GiNaC::ex rhs;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              std::cout << x_old(1, 0) << std::endl;
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              std::cout << x_current(1, 0) << std::endl;
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             int where = x.find('x');
             int mid = x.length() / 2;
@@ -991,18 +741,18 @@ private:
             GiNaC::ex lhs, b, c;
             GiNaC::ex rhs;
             if (x1y2exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             if (x1y3exist) {
-              b = ex3.subs(syms[0] == x_old(0, 0));
-              c = ex4.subs(syms[0] == x_old(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
+              c = ex4.subs(syms[0] == x_current(0, 0));
             } else {
-              b = ex3.subs(syms[1] == x_old(1, 0));
-              c = ex4.subs(syms[1] == x_old(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
+              c = ex4.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back((lhs > rhs) || (b < c));
             break;
@@ -1017,18 +767,18 @@ private:
             GiNaC::ex lhs, b, c;
             GiNaC::ex rhs;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             if (x1y3exist) {
-              b = ex3.subs(syms[0] == x_old(0, 0));
-              c = ex4.subs(syms[0] == x_old(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
+              c = ex4.subs(syms[0] == x_current(0, 0));
             } else {
-              b = ex3.subs(syms[1] == x_old(1, 0));
-              c = ex4.subs(syms[1] == x_old(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
+              c = ex4.subs(syms[1] == x_current(1, 0));
             }
             bool a = (lhs == rhs), d = (b < c);
             std::cout << "==" << a << " <" << d << std::endl;
@@ -1042,18 +792,18 @@ private:
             GiNaC::ex lhs, b, c;
             GiNaC::ex rhs;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             if (x1y2exist) {
-              b = ex3.subs(syms[0] == x_old(0, 0));
-              c = ex4.subs(syms[0] == x_old(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
+              c = ex4.subs(syms[0] == x_current(0, 0));
             } else {
-              b = ex3.subs(syms[1] == x_old(1, 0));
-              c = ex4.subs(syms[1] == x_old(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
+              c = ex4.subs(syms[1] == x_current(1, 0));
             }
             guard.push_back((lhs == rhs) || (b > c));
           }
@@ -1066,20 +816,20 @@ private:
             GiNaC::ex lhs, b, c;
             GiNaC::ex rhs, d;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             if (x1y2exist) {
-              b = ex3.subs(syms[0] == x_old(0, 0));
-              c = ex5.subs(syms[0] == x_old(0, 0));
-              d = ex4.subs(syms[0] == x_old(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
+              c = ex5.subs(syms[0] == x_current(0, 0));
+              d = ex4.subs(syms[0] == x_current(0, 0));
             } else {
-              b = ex3.subs(syms[1] == x_old(1, 0));
-              c = ex5.subs(syms[1] == x_old(1, 0));
-              d = ex4.subs(syms[1] == x_old(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
+              c = ex5.subs(syms[1] == x_current(1, 0));
+              d = ex4.subs(syms[1] == x_current(1, 0));
             }
             int where = x.find('=');
             int mid = x.length() / 2;
@@ -1098,20 +848,20 @@ private:
             GiNaC::ex lhs, b, c;
             GiNaC::ex rhs, d;
             if (x1exist) {
-              lhs = ex1.subs(syms[0] == x_old(0, 0));
-              rhs = ex2.subs(syms[0] == x_old(0, 0));
+              lhs = ex1.subs(syms[0] == x_current(0, 0));
+              rhs = ex2.subs(syms[0] == x_current(0, 0));
             } else {
-              lhs = ex1.subs(syms[1] == x_old(1, 0));
-              rhs = ex2.subs(syms[1] == x_old(1, 0));
+              lhs = ex1.subs(syms[1] == x_current(1, 0));
+              rhs = ex2.subs(syms[1] == x_current(1, 0));
             }
             if (x1y3exist) {
-              b = ex3.subs(syms[0] == x_old(0, 0));
-              c = ex5.subs(syms[0] == x_old(0, 0));
-              d = ex4.subs(syms[0] == x_old(0, 0));
+              b = ex3.subs(syms[0] == x_current(0, 0));
+              c = ex5.subs(syms[0] == x_current(0, 0));
+              d = ex4.subs(syms[0] == x_current(0, 0));
             } else {
-              b = ex3.subs(syms[1] == x_old(1, 0));
-              c = ex5.subs(syms[1] == x_old(1, 0));
-              d = ex4.subs(syms[1] == x_old(1, 0));
+              b = ex3.subs(syms[1] == x_current(1, 0));
+              c = ex5.subs(syms[1] == x_current(1, 0));
+              d = ex4.subs(syms[1] == x_current(1, 0));
             }
             int where = x.find('=');
             int mid = x.length() / 2;
@@ -1133,25 +883,25 @@ private:
           GiNaC::ex lhs, b, c;
           GiNaC::ex rhs, d, e;
           if (x1exist) {
-            lhs = ex1.subs(syms[0] == x_old(0, 0));
-            rhs = ex2.subs(syms[0] == x_old(0, 0));
+            lhs = ex1.subs(syms[0] == x_current(0, 0));
+            rhs = ex2.subs(syms[0] == x_current(0, 0));
           } else {
-            lhs = ex1.subs(syms[1] == x_old(1, 0));
-            rhs = ex2.subs(syms[1] == x_old(1, 0));
+            lhs = ex1.subs(syms[1] == x_current(1, 0));
+            rhs = ex2.subs(syms[1] == x_current(1, 0));
           }
           if (x1y2exist) {
-            b = ex3.subs(syms[0] == x_old(0, 0));
-            c = ex4.subs(syms[0] == x_old(0, 0));
+            b = ex3.subs(syms[0] == x_current(0, 0));
+            c = ex4.subs(syms[0] == x_current(0, 0));
           } else {
-            b = ex3.subs(syms[1] == x_old(1, 0));
-            c = ex4.subs(syms[1] == x_old(1, 0));
+            b = ex3.subs(syms[1] == x_current(1, 0));
+            c = ex4.subs(syms[1] == x_current(1, 0));
           }
           if (x1y3exist) {
-            d = ex5.subs(syms[0] == x_old(0, 0));
-            e = ex6.subs(syms[0] == x_old(0, 0));
+            d = ex5.subs(syms[0] == x_current(0, 0));
+            e = ex6.subs(syms[0] == x_current(0, 0));
           } else {
-            d = ex5.subs(syms[1] == x_old(1, 0));
-            e = ex6.subs(syms[1] == x_old(1, 0));
+            d = ex5.subs(syms[1] == x_current(1, 0));
+            e = ex6.subs(syms[1] == x_current(1, 0));
           }
           int where = x.find('=');
           int mid = x.length() / 2;
@@ -1174,27 +924,27 @@ private:
           GiNaC::ex lhs, a, b, c;
           GiNaC::ex rhs, d, e;
           if (x1exist) {
-            lhs = ex1.subs(syms[0] == x_old(0, 0));
-            rhs = ex2.subs(syms[0] == x_old(0, 0));
-            a = ex2a.subs(syms[0] == x_old(0, 0));
+            lhs = ex1.subs(syms[0] == x_current(0, 0));
+            rhs = ex2.subs(syms[0] == x_current(0, 0));
+            a = ex2a.subs(syms[0] == x_current(0, 0));
           } else {
-            lhs = ex1.subs(syms[1] == x_old(1, 0));
-            rhs = ex2.subs(syms[1] == x_old(1, 0));
-            a = ex2a.subs(syms[1] == x_old(0, 0));
+            lhs = ex1.subs(syms[1] == x_current(1, 0));
+            rhs = ex2.subs(syms[1] == x_current(1, 0));
+            a = ex2a.subs(syms[1] == x_current(0, 0));
           }
           if (x1y2exist) {
-            b = ex3.subs(syms[0] == x_old(0, 0));
-            c = ex4.subs(syms[0] == x_old(0, 0));
+            b = ex3.subs(syms[0] == x_current(0, 0));
+            c = ex4.subs(syms[0] == x_current(0, 0));
           } else {
-            b = ex3.subs(syms[1] == x_old(1, 0));
-            c = ex4.subs(syms[1] == x_old(1, 0));
+            b = ex3.subs(syms[1] == x_current(1, 0));
+            c = ex4.subs(syms[1] == x_current(1, 0));
           }
           if (x1y3exist) {
-            d = ex5.subs(syms[0] == x_old(0, 0));
-            e = ex6.subs(syms[0] == x_old(0, 0));
+            d = ex5.subs(syms[0] == x_current(0, 0));
+            e = ex6.subs(syms[0] == x_current(0, 0));
           } else {
-            d = ex5.subs(syms[1] == x_old(1, 0));
-            e = ex6.subs(syms[1] == x_old(1, 0));
+            d = ex5.subs(syms[1] == x_current(1, 0));
+            e = ex6.subs(syms[1] == x_current(1, 0));
           }
           guard.push_back((lhs == rhs) || (rhs == a) || (b > c) || (c < d));
           break;
@@ -1228,31 +978,15 @@ private:
     return answer;
   }
 
-  int checkData() {
-    int error = 0;
-    if ((unsigned)this->x_mod[0].x_dim != (unsigned)this->x_data.X[0].n_rows) {
-      error = 1;
-    }
-    if ((unsigned)this->x_mod[0].u_dim != (unsigned)this->x_data.U.n_cols &&
-        this->x_mod[0].u_dim > 0) {
-      error = 2;
-    }
-    if ((unsigned)this->x_mod[0].d_dim != (unsigned)this->x_data.D.n_cols &&
-        this->x_mod[0].d_dim > 0) {
-      error = 3;
-    }
-    return error;
-  }
-  int NumSymbols(shs_t &old) {
+  int NumSymbols() {
     // To find how many symbolic continuous variables are needed
     // find string with maximum length
     int kmax = 0;
-    for (int k = 0; k < pow(old.Q, 2); k++) {
-      if (sizeof(old.Tq[k]) > sizeof(old.Tq[kmax])) {
+    for (int k = 0; k < pow(Q, 2); k++) {
+      if (sizeof(Tq[k]) > sizeof(Tq[kmax])) {
         kmax = k;
       }
     }
-    // std::cout << "kmax: " << kmax << std::endl;
     return kmax;
   }
   void populateTq(matvar_t &content) {
@@ -1262,28 +996,17 @@ private:
     // Cells containing strings for guards or
     // Numeric containing probabilities
     if (content.data != NULL) {
-      std::cout << "Tq: " << content.data_type << std::endl;
       // Reading from cells
       std::string str = container.readCells(content);
-      std::cout << "Tq: " << str << std::endl;
-      std::vector<std::string> x = splitStr(str, ' '); // TODO: CHANGEseparater
-      int numEl = x.size();
-      std::cout << numEl << std::endl;
-      int q = sqrt(numEl);
-      std::cout << "modes: " << q << std::endl;
-      this->Q = q;
-      this->Tq = x; // Recall being stored in column format
+      Tq = splitStr(str, ' ');
+      Q = sqrt(Tq.size());
     } else {
       std::cout << "Tq field not input in arma::mat file" << std::endl;
     }
   }
-  std::vector<int> t_q(shs_t &old, int q_old, int monte) {
-    int steps = 1;
-    std::vector<int> modes(steps + 1);
+  std::vector<int> t_q(int q_current, int monte) {
+    std::vector<int> modes = {q_current};
 
-    modes[0] = q_old;
-    // if(old.x_mod[0].sigma.isZero(0) )
-    //{
     std::random_device rd;
     std::mt19937 gen(rd());
     int count;
@@ -1293,242 +1016,97 @@ private:
       sum = 0;
       U = std::generate_canonical<double, 10>(gen);
       while (sum < U) {
-        sum += old.p_k[monte](modes[i], count);
+        sum += p_k[monte](modes[i], count);
         if (sum > U) {
-          modes[i + 1] = count;
+          modes.push_back(count);
         }
         count++;
       }
     }
-
     return modes;
   }
 };
 
 /*************************************************************************************************/
-// Single initial state SHS with fixed or sigmoidal probabilities governing the
-// transitioning between modes`
+// Single initial state SHS with fixed or sigmoidal probabilities governing
+// the transitioning between modes`
 template <> class shs_t<arma::mat, int> {
 public:
   int Q;        // Discrete modes
   arma::mat Tq; // Discrete kernel- can represent either guards or probabilities
   int n;        // Dimension of continuous state space in given mode
-  arma::mat p_k;
-  arma::mat q_0;                 // Modes
+  std::optional<arma::mat> p_k;
+  std::optional<arma::mat> q_0;  // Modes
   std::vector<ssmodels_t> x_mod; // container of models
-  exdata_t x_data;
+  sd::optional<exdata_t> x_data;
 
 private:
   bool sigmoid;
 
 public:
-  shs_t() {
-    n = 1; // Dimension of continuous state space in given mode
-    p_k = arma::mat(Q, n);
-    q_0 = arma::mat(Q, 1); // Initial mode
-    std::vector<ssmodels_t> x_mod;
-    Q = 1; // Discrete modes
-    exdata_t x_data;
-    Tq = arma::mat(n, n);
-    sigmoid = false;
+  shs_t()
+      : n{1}, Q{1}, p_k{std::nullopt}, q_0{std::nullopt},
+        Tq{arma::zeros<arma::mat>(1, 1)}, sigmoid{false} {}
+  shs_t(int disc, int num, arma::mat tq, std::vector<ssmodels_t> &current,
+        exdata_t &data)
+      : Q{disc}, n{num}, x_mod{current}, x_data{data}, Tq{tq}, sigmoid{false} {
+    p_k = x_data.InitTq[0];
+    q_0 = x_data.q_init[0]; // Initial mode
   }
-  shs_t(int disc, int num, arma::mat tq, std::vector<ssmodels_t> &old,
-        exdata_t &data) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
-    p_k = data.InitTq[0];
-    q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    sigmoid = false;
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
-  }
-  shs_t(int num, std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = data.U.n_cols; // Discrete modes
-    n = num;           // Dimension of continuous state space in given mode
-    p_k = data.InitTq[0];
-    q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = arma::zeros<arma::mat>(1, 1);
-    Tq.reset();
-    sigmoid = false;
-    // update U dimension
-    for (size_t i = 0; i < Q; i++) {
-      old[i].u_dim = data.U.n_cols;
-    }
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
-  }
-  shs_t(int num, std::vector<ssmodels_t> &old) {
-    Q = old.size(); // Discrete modes
-    n = num;        // Dimension of continuous state space in given mode
-    p_k = arma::zeros<arma::mat>(1, 1);
-    q_0 = arma::zeros<arma::mat>(1, 1); // Initial mode
-    x_mod = old;
-    exdata_t data;
-    x_data = data;
-    Tq = arma::zeros<arma::mat>(1, 1);
-    Tq.reset();
-    sigmoid = false;
-  }
-  shs_t(std::vector<ssmodels_t> &old) {
-    Q = old.size();      // Discrete modes
-    n = old[0].A.n_cols; // Dimension of continuous state space in given mode
-    p_k = arma::zeros<arma::mat>(1, 1);
-    q_0 = arma::zeros<arma::mat>(1, 1); // Initial mode
-    x_mod = old;
-    exdata_t data;
-    x_data = data;
-    Tq = arma::zeros<arma::mat>(1, 1);
-    Tq.reset();
-    sigmoid = false;
-  }
-  shs_t(arma::mat tq, std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = tq.n_rows;    // Discrete modes
-    n = old[0].x_dim; // Dimension of continuous state space in given mode
-    p_k = data.InitTq[0];
-    q_0 = data.q_init[0]; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    Tq = checkStochasticity(Tq);
-    sigmoid = false;
-    for (size_t i = 0; i < Q; i++) {
-      old[i].u_dim = data.U.n_cols;
-    }
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
-  }
-  shs_t(arma::mat tq, std::vector<ssmodels_t> &old) {
-    Q = tq.n_rows;    // Discrete modes
-    n = old[0].x_dim; // Dimension of continuous state space in given mode
-    p_k = arma::zeros<arma::mat>(1, 1);
-    q_0 = arma::zeros<arma::mat>(1, 1); // Initial mode
-    x_mod = old;
-    exdata_t data;
-    x_data = data;
-    Tq = tq;
-    Tq = checkStochasticity(Tq);
-    sigmoid = false;
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
-  }
-  shs_t(const char *fn, exdata_t &data) {
-    // Obtain number of discrete modes and obtain Tq
-    bool error = this->obtainTqfromMat(fn, *this);
 
-    if (!error) {
-      Q = this->Q;
-      Tq = this->Tq;
-      sigmoid = false;
+  shs_t(int num, std::vector<ssmodels_t> &current, exdata_t &data)
+      : n{num}, x_mod{current}, x_data{data},
+        Tq{arma::zeros<arma::mat>(num, num)}, sigmoid{false} {
+    Q = x_data.U.n_cols; // Discrete modes
+    p_k = x_data.InitTq[0];
+    q_0 = x_data.q_init[0]; // Initial mode
+  }
+
+  shs_t(int num, std::vector<ssmodels_t> &current)
+      : n{num}, x_mod{current}, x_data{std::nullopt}, p_k{std::nullopt},
+        q_0{std::nullopt}, Tq{arma::zeros<arma::mat>(num, num)}, sigmoid{
+                                                                     false} {}
+
+  shs_t(int num, std::vector<ssmodels_t> &current)
+      : Q{1}, x_mod{current}, x_data{std::nullopt}, sigmoid{false} {
+    n = x_mod[0].A.n_cols; // Dimension of continuous state space in given mode
+    p_k = std::nullopt;
+    q_0 = std::nullopt; // Initial mode
+    Tq{arma::zeros<arma::mat>(n, n)};
+  }
+
+  shs_t(arma::mat tq, std::vector<ssmodels_t> &current,
+        std::optional<exdata_t> &data)
+      : x_data{data}, x_mod{current}, Tq{tq}, sigmoid{false} {
+    Q = Tq.n_rows;      // Discrete modes
+    n = x_mod[0].x_dim; // Dimension of continuous state space in given mode
+    p_k = x_data.has_value() ? x_data->InitTq[0] : std::nullopt;
+    q_0 = x_data.has_value() ? x_data->q_init[0] : std::nullopt; // Initial mode
+    Tq = checkStochasticity(Tq);
+    sigmoid = false;
+  }
+
+  shs_t(const char *fn, exdata_t &data) {
+    if (!obtainTqfromMat(fn)) {
       x_data = data;
-      p_k = data.InitTq[0];
-      q_0 = data.q_init[0]; // Initial mode
+      p_k = x_data.InitTq[0];
+      q_0 = x_data.q_init[0]; // Initial mode
       // create array containing the ssmodels
       std::vector<ssmodels_t> models;
       arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
       for (int i = 1; i <= Q; i++) {
-        int x_dimension = data.x_k.n_rows;
-        int u_dimension = data.u_k.n_rows;
-        int d_dimension = data.d_k.n_rows;
-        if (u_dimension == 1 && d_dimension == 1) {
-          double lhs = arma::accu(data.u_k == dummy);
-          double rhs = arma::accu(data.d_k == dummy);
-          if ((lhs > 0) && (rhs > 0)) {
-            u_dimension = 0;
-            d_dimension = 0;
-          } else if ((lhs > 0) && (rhs == 0)) {
-            u_dimension = 0;
-          }
-        }
-        ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-        if ((mod.C.n_rows == 1) && (mod.C.n_cols == 1) && x_dimension > 1) {
-          mod.C.resize(x_dimension, x_dimension);
-          mod.C = arma::eye<arma::mat>(x_dimension, x_dimension);
-        }
-        this->n = x_dimension; // TODO: update to handle different dimensions
-                               // for each state (Store)
+        n = x_data.x_k.n_rows;
+        ssmodels_t mod;
         // Reading models
         std::cout
             << "Initialising model of continuous variables in discrete mode "
             << i << std::endl;
-        mod.obtainSSfromMat(fn, mod, i);
-        if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-            (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-          mod.obtainSSfromMat(fn, mod);
-        }
+        mod.obtainSSfromMat(fn, i);
         mod.checkModel(mod);
         models.push_back(mod);
       }
       x_mod = models;
-      n = models[0].x_dim;
 
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        std::cout << "Incorrect size of disturbance vector" << std::endl;
-        exit(0);
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
     } else {
       std::cout << "File " << fn << " not found." << std::endl;
       exit(0);
@@ -1536,31 +1114,24 @@ public:
   }
   // generate shs from file
   shs_t(const char *fn) {
-    // Obtain number of discrete modes and obtain Tq
-    bool error = this->obtainTqfromMat(fn, *this);
-    if (!error) {
-      Q = this->Q;
-      Tq = this->Tq;
-      sigmoid = false;
+    if (!obtainTqfromMat(fn)) {
       // create array containing the ssmodels
       std::vector<ssmodels_t> models;
       arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
       for (int i = 1; i <= Q; i++) {
-
         ssmodels_t mod;
         // Reading models
         std::cout
             << "Initialising model of continuous variables in discrete mode "
             << i << std::endl;
-        mod.obtainSSfromMat(fn, mod, i);
-        this->n = mod.A.n_rows; // TODO: update to handle different dimensions
-                                // for each state (Store)
+        mod.obtainSSfromMat(fn, i);
+        n = mod.A.n_rows; // TODO: update to handle different dimensions
+                          // for each state (Store)
 
-        mod.checkModel(mod);
+        mod.checkModel();
         models.push_back(mod);
       }
       x_mod = models;
-      n = models[0].x_dim;
     } else {
       std::cout << "File " << fn << " not found." << std::endl;
       exit(0);
@@ -1570,43 +1141,28 @@ public:
     if (bmdp == 1) {
       std::vector<ssmodels_t> models;
       for (int i = 1; i <= modes; i++) {
-        ssmodels_t mod(1, 1, 1);
-        mod.obtainBMDPfromMat(fn, mod, i);
-        mod.x_dim = mod.A.n_rows;
-        mod.u_dim = 0;
-        mod.d_dim = 0;
+        ssmodels_t mod;
+        mod.obtainBMDPfromMat(fn, i);
         models.push_back(mod);
       }
-      this->x_mod = models;
-      this->n = models[0].x_dim;
+
+      x_mod = models;
+      n = models[0].A.n_cols;
     } else {
       // Obtain number of discrete modes and obtain Tq
-      bool error = this->obtainTqfromMat(fn, *this);
-      if (!error) {
-        Q = this->Q;
-        Tq = this->Tq;
-        sigmoid = false;
+      if (!obtainTqfromMat(fn)) {
         // create array containing the ssmodels
         std::vector<ssmodels_t> models;
         arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
         for (int i = 1; i <= Q; i++) {
-          int x_dimension = this->x_mod[i].A.n_rows;
-          int u_dimension = this->x_mod[i].B.n_rows;
-          int d_dimension = this->x_mod[i].F.n_rows;
-          ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-          this->n = x_dimension; // TODO: update to handle different dimensions
-                                 // for each state (Store)
+          ssmodels_t mod;
           // Reading models
-          mod.obtainSSfromMat(fn, mod, i);
-          if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-              (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-            mod.obtainSSfromMat(fn, mod);
-          }
-          mod.checkModel(mod);
+          mod.obtainSSfromMat(fn, i);
+          mod.checkModel();
           models.push_back(mod);
         }
         x_mod = models;
-        n = models[0].x_dim;
+        n = models[0].A.n_cols;
       } else {
         std::cout << "File " << fn << " not found." << std::endl;
         exit(0);
@@ -1625,65 +1181,32 @@ public:
     std::vector<ssmodels_t> models;
     arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
     for (int i = 1; i <= Q; i++) {
-      int x_dimension = data.x_k.n_rows;
-      int u_dimension = data.u_k.n_rows;
-      int d_dimension = data.d_k.n_rows;
-      double lhs = arma::accu(data.u_k == dummy);
-      double rhs = arma::accu(data.d_k == dummy);
-      if ((lhs > 0) && (rhs > 0)) {
-        u_dimension = 0;
-        d_dimension = 0;
-      } else if ((lhs > 0) && (rhs == 0)) {
-        u_dimension = 0;
-      }
-      ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-      this->n = x_dimension; // TODO: update to handle different dimensions for
-                             // each state (Store)
-      // Reading models
-      mod.obtainSSfromMat(fn, mod, i);
-      if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-          (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-        mod.obtainSSfromMat(fn, mod);
-      }
-      mod.checkModel(mod);
+      n = data.x_k.n_rows;
+      ssmodels_t mod;
+      mod.obtainSSfromMat(fn, i);
+      mod.checkModel();
       models.push_back(mod);
     }
     x_mod = models;
-
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        throw "Correct input vectors size";
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
   }
-  virtual ~shs_t() {}
-  std::vector<int> t_q(shs_t &old, int q_old) {
-    int steps = 1;
-    std::vector<int> modes(steps + 1);
 
-    modes[0] = q_old;
+  virtual ~shs_t() {}
+  std::vector<int> t_q(shs_t &current, int q_current) {
+    std::vector<int> modes = {q_current}
+
     std::random_device rd;
     std::mt19937 gen(rd());
-    int count;
-    double sum, U;
+    int count = 0;
+    double sum = 0;
+    double U = 0;
     for (int i = 0; i < steps; i++) {
       count = 0;
       sum = 0;
       U = std::generate_canonical<double, 10>(gen);
       while (sum < U) {
-        sum += old.p_k(modes[i], count);
+        sum += p_k(modes[i], count);
         if (sum > U) {
-          modes[i + 1] = count;
+          modes.push_back(count);
         }
         count++;
       }
@@ -1692,172 +1215,137 @@ public:
     return modes;
   }
   // Dynamic model of continuous state
-  void step(shs_t &old, int n, int steps) {
-    arma::mat x_old(old.x_data.X[n]);
-    arma::mat x_new = arma::mat(old.x_mod[0].x_dim, steps);
-    arma::mat u_old = old.x_data.u_k;
-    arma::mat d_old = arma::mat(old.x_mod[(int)old.q_0(n, 0)].d_dim, steps);
-    d_old = old.x_data.d_k;
-    if (old.Q == 1) {
-      if (old.x_mod[0].N.is_empty()) {
-        if (!u_old.is_empty()) {
-          if (u_old.n_cols == old.x_mod[0].B.n_rows) {
-            u_old = u_old.t();
-          }
-          u_old = arma::repmat(old.x_data.u_k.col(n), 1, steps);
+  void step(int n, int steps) {
+    arma::mat x_current(x_data.X[n]);
+    arma::mat x_new = arma::mat(x_mod[0].x_dim, steps);
+    arma::mat u_current = x_data.u_k;
+    arma::mat d_current = arma::mat(x_mod[(int)q_0(n, 0)].d_dim, steps);
+    d_current = x_data.d_k;
+    if (Q == 1) {
+      if (!u_is_empty()) {
+        if (u_n_cols == x_mod[0].B.n_rows) {
+          u_current = u_t();
         }
-        if (!d_old.is_empty()) {
-          if (d_old.n_cols == old.x_mod[0].F.n_rows) {
-            d_old = d_old.t();
-          }
-          d_old = arma::repmat(d_old.col(n), 1, steps);
-        }
-        x_new = old.x_mod[0].updateLTIst(old.x_mod[0], x_old, u_old, d_old);
-      } else {
-        x_new =
-            old.x_mod[0].updateBi(old.x_mod[0].A, old.x_mod[0].B,
-                                  old.x_mod[0].N, old.x_mod[0].Q, x_old, u_old);
+        u_current = arma::repmat(x_data.u_k.col(n), 1, steps);
       }
+      if (!d_is_empty()) {
+        if (d_n_cols == x_mod[0].F.n_rows) {
+          d_current = d_t();
+        }
+        d_current = arma::repmat(d_col(n), 1, steps);
+      }
+      x_new = getNextStateFromCurrent(x_current, u_current, d_current);
     } else {
-      double lhs =
-          arma::accu(old.x_mod[(int)old.q_0(n, 0)].sigma ==
-                     arma::zeros<arma::mat>(
-                         (double)old.x_mod[(int)old.q_0(n, 0)].sigma.n_rows,
-                         (double)old.x_mod[(int)old.q_0(n, 0)].sigma.n_cols));
+      double lhs = arma::accu(
+          x_mod[(int)q_0(n, 0)].sigma ==
+          arma::zeros<arma::mat>((double)x_mod[(int)q_0(n, 0)].sigma.n_rows,
+                                 (double)x_mod[(int)q_0(n, 0)].sigma.n_cols));
       if (lhs > 0) {
         for (int j = 0; j < steps; j++) {
-          if (old.sigmoid) {
+          if (sigmoid) {
             // Generalise: assumes for now that only have pairs of discrete
             // modes
-            old.p_k(0, 0) = sigmoidCompute(x_old(0, 0), 100, 19.5);
-            old.p_k(0, 1) = 1 - old.p_k(0, 0);
-            old.p_k(1, 1) = 1 - old.p_k(0, 0);
-            old.p_k(1, 0) = old.p_k(1, 1);
-            std::cout << "Trans: " << old.p_k << std::endl;
+            p_k(0, 0) = sigmoidCompute(x_current(0, 0), 100, 19.5);
+            p_k(0, 1) = 1 - p_k(0, 0);
+            p_k(1, 1) = 1 - p_k(0, 0);
+            p_k(1, 0) = p_k(1, 1);
+            std::cout << "Trans: " << p_k << std::endl;
           } else {
-            if (n > 0 && !old.Tq.is_empty()) {
-              old.p_k = old.p_k * old.Tq;
+            if (n > 0 && !Tq.is_empty()) {
+              p_k = p_k * Tq;
             }
           }
-          if (!old.Tq.is_empty()) {
-            int q_0 = (int)old.q_0(n, j);
-            std::vector<int> q = t_q(old, q_0);
+          if (!Tq.is_empty()) {
+            int q_0 = (int)q_0(n, j);
+            std::vector<int> q = t_q(current, q_0);
             int q_new = q[1];
 
-            if (!old.x_mod[(int)old.q_0(n, j)].N.is_empty()) {
-              x_new = old.x_mod[q_new].updateBi(old.x_mod[(int)old.q_0(n, j)].A,
-                                                old.x_mod[(int)old.q_0(n, j)].B,
-                                                old.x_mod[(int)old.q_0(n, j)].N,
-                                                old.x_mod[old.q_0(n, j)].Q,
-                                                x_old, u_old);
-            } else if (old.x_mod[(int)old.q_0(n, j)].d_dim == 0) {
-              x_new.col(j) = old.x_mod[q_new].updateLTI(
-                  old.x_mod[(int)old.q_0(n, j)], x_old.col(j), u_old.col(j));
-            } else {
-              x_new.col(j) = old.x_mod[q_new].updateLTIad(
-                  old.x_mod[(int)old.q_0(n, j)], x_old.col(j), u_old.col(j),
-                  d_old.col(j));
-            }
-            // Append result to Q in old object (columns)
-            old.q_0(n + 1, j) = q_new;
+            x_new.col(j) = x_mod[q_new].getNextStateFromCurrent(
+                x_col(j), u_col(j), d_col(j));
+
+            // Append result to Q in current object (columns)
+            q_0(n + 1, j) = q_new;
           } else {
-            int q_new = old.x_data.U(n + 1, 0);
-            arma::mat emptyMat = arma::zeros<arma::mat>(1, 1);
-            emptyMat.reset();
-            x_new = old.x_mod[q_new].updateLTIst(
-                old.x_mod[(int)u_old(0, 0)], x_old.col(j), emptyMat, emptyMat);
-            // Append result to Q in old object (columns)
-            old.q_0(n + 1, 0) = q_new;
+            int q_new = x_data.U(n + 1, 0);
+            x_new = x_mod[q_new].getNextStateFromCurrent(x_col(j), std::nullopt,
+                                                         std::nullopt);
+            // Append result to Q in current object (columns)
+            q_0(n + 1, 0) = q_new;
           }
         }
 
       } else {
         // Get next state by updating p_k
         // Assumes continuous variables are affected by white noise
-        // described using gaussian distribution with mean x[k] = x_old,
+        // described using gaussian distribution with mean x[k] = x_current,
         // variance sigma
         // Compute conditional distribution for each mode
         for (int j = 0; j < steps; j++) {
-          int q_0 = (int)old.q_0(n, j);
-          if (old.sigmoid) {
-            old.p_k(0, 0) = sigmoidCompute(x_old(0, 0), 1, 19.5) *
-                            sigmoidCompute(x_old(1, 0), 1, 21.25);
-            old.p_k(0, 1) = 1 - old.p_k(0, 0);
-            old.p_k(1, 1) = old.p_k(0, 0);
-            old.p_k(1, 0) = 1 - old.p_k(0, 0);
+          int q_0 = (int)q_0(n, j);
+          if (sigmoid) {
+            p_k(0, 0) = sigmoidCompute(x_current(0, 0), 1, 19.5) *
+                        sigmoidCompute(x_current(1, 0), 1, 21.25);
+            p_k(0, 1) = 1 - p_k(0, 0);
+            p_k(1, 1) = p_k(0, 0);
+            p_k(1, 0) = 1 - p_k(0, 0);
           } else {
-            computeConditional(old, x_old, j, q_0);
+            computeConditional(x_current, j, q_0);
           }
           // Sample from conditional distribution to get q_new
-          std::vector<int> q = t_q(old, q_0);
+          std::vector<int> q = t_q(q_0);
           int q_new = q[1];
-          // Append result to Q in old object (columns)
-          old.q_0(n + 1, j) = q_new;
+          // Append result to Q in current object (columns)
+          q_0(n + 1, j) = q_new;
           // Assuming no reset kernels
-          arma::mat x_up = arma::mat(old.x_mod[q_new].x_dim, 1);
-          if (!old.x_mod[(int)old.q_0(n, j)].N.is_empty()) {
-            x_up = old.x_mod[q_new].updateBi(old.x_mod[(int)old.q_0(n, j)].A,
-                                             old.x_mod[(int)old.q_0(n, j)].B,
-                                             old.x_mod[(int)old.q_0(n, j)].N,
-                                             old.x_mod[old.q_0(n, j)].Q, x_old,
-                                             u_old);
-            for (int k = 0; k < old.x_mod[q_new].x_dim; k++) {
-              x_new(k, j) =
-                  getSampleNormal(x_up(k, 0), old.x_mod[q_new].sigma(k, 0));
-            }
-
-          } else if (old.x_mod[(int)old.q_0(n, j)].d_dim == 0) {
-
-            x_up = old.x_mod[q_new].updateLTI(old.x_mod[(int)old.q_0(n, j)],
-                                              x_old.col(j), u_old.col(j));
-            for (int k = 0; k < old.x_mod[q_new].x_dim; k++) {
-              x_new(k, j) =
-                  getSampleNormal(x_up(k, 0), old.x_mod[q_new].sigma(k, 0));
-            }
+          arma::mat x_up = arma::mat(x_mod[q_new].x_dim, 1);
+          if (!x_mod[(int)q_0(n, j)].N.is_empty()) {
+            x_up = x_mod[q_new].getNextStateFromCurrentx_current, u_current, std::nullopt);
+          } else if (x_mod[(int)q_0(n, j)].d_dim == 0) {
+            x_up = x_mod[q_new].getNextStateFromCurrent(x_col(j), u_col(j),
+                                                        std::nullopt);
           } else {
-            x_up = old.x_mod[q_new].updateLTIad(old.x_mod[(int)old.q_0(n, j)],
-                                                x_old.col(j), u_old.col(j),
-                                                d_old.col(j));
-            for (int k = 0; k < old.x_mod[q_new].x_dim; k++) {
-              x_new(k, j) =
-                  getSampleNormal(x_up(k, 0), old.x_mod[q_new].sigma(k, 0));
-            }
+            x_up = x_mod[q_new].getNextStateFromCurrent(x_col(j), u_col(j),
+                                                        d_col(j));
+          }
+
+          for (int k = 0; k < x_mod[q_new].x_dim; k++) {
+            x_new(k, j) = getSampleNormal(x_up(k, 0), x_mod[q_new].sigma(k, 0));
           }
         }
       }
     }
-    // Append result to X in old object (3rd dimension)
-    old.x_data.X.push_back(x_new);
+    // Append result to X in current object (3rd dimension)
+    x_data.X.push_back(x_new);
   }
-  void computeConditional(shs_t &old, arma::mat x_old, int index, int q_old) {
+  void computeConditional(shs_t &current, arma::mat x_current, int index,
+                          int q_current) {
     double min = -1, max = 1;
-    double val; //,err, xmin[1] ={}, xmax[1]={};
+    double val = 0;
     std::vector<double> v = {};
-    for (int i = 0; i < 2 * old.x_mod[q_old].x_dim; i++) {
-      if (i < old.x_mod[q_old].x_dim) {
-        v.push_back(x_old(i, index)); //
+    for (int i = 0; i < 2 * x_mod[q_current].x_dim; i++) {
+      if (i < x_mod[q_current].x_dim) {
+        v.push_back(x_current(i, index)); //
       } else {
         // TODO: Case when sigma is correlated
-        v.push_back(old.x_mod[q_old].sigma(i - old.x_mod[q_old].x_dim, 0));
+        v.push_back(x_mod[q_current].sigma(i - x_mod[q_current].x_dim, 0));
       }
     }
     val = 1;
     // Update p_k
     if (n == 0) {
-      old.p_k = old.Tq;
+      p_k = Tq;
     } else {
-      old.p_k = old.p_k * val * old.Tq;
+      p_k = p_k * val * Tq;
     }
-    //    std::cout << "New kernel: " << old.p_k << std::endl;
   }
   void createPySimPlots(arma::mat y, arma::mat modes, int x_dim) {
     int T = y.n_rows / x_dim;
     std::cout << "Creating python simulation plot file" << std::endl;
     std::ofstream myfile;
-    // If folder does not already exist then
+    // If fcurrenter does not already exist then
     // create it else store in already existant
-    // folder
-    if (checkFolderExists("../results") == -1) {
+    // fcurrenter
+    if (checkFcurrenterExists("../results") == -1) {
       if (mkdir("../results", 0777) == -1) {
         std::cerr << "Error cannot create results directory: "
                   << std::strerror(errno) << std::endl;
@@ -2031,39 +1519,39 @@ public:
     myfile << "plt.show()" << std::endl;
     myfile.close();
   }
-  void run(shs_t &old, int N, int steps) {
+  void run(shs_t &current, int N, int steps) {
     clock_t begin, end;
     begin = clock();
     double time = 0;
 
     // For deterministic case perform 1 run
     // For stochastic version perform Monte Carlo + compute mean
-    int i = 0, x_dim = old.x_mod[0].A.n_rows;
+    int i = 0, x_dim = x_mod[0].A.n_rows;
 
     arma::mat y = arma::zeros<arma::mat>(N * x_dim, steps);
     arma::mat modes = arma::zeros<arma::mat>(N, steps);
-    old.p_k.set_size(size(old.Tq));
-    old.p_k = old.Tq;
+    p_k.set_size(size(Tq));
+    p_k = Tq;
     int count = 0;
     while (i < N) {
-      old.step(old, i, steps);
-      if (old.x_mod[0].u_dim > 0) {
-        if ((unsigned)old.x_data.U.n_rows == (unsigned)N) {
-          old.x_data.u_k = old.x_data.U.row(i);
+      step(current, i, steps);
+      if (x_mod[0].u_dim > 0) {
+        if ((unsigned)x_data.U.n_rows == (unsigned)N) {
+          x_data.u_k = x_data.U.row(i);
         }
       }
-      if (old.x_mod[0].d_dim > 0) {
-        if ((unsigned)old.x_data.D.n_rows == (unsigned)N) {
-          old.x_data.d_k = old.x_data.D.row(i);
+      if (x_mod[0].d_dim > 0) {
+        if ((unsigned)x_data.D.n_rows == (unsigned)N) {
+          x_data.d_k = x_data.D.row(i);
         }
       }
-      arma::mat tempX = old.x_data.X[i];
+      arma::mat tempX = x_data.X[i];
       if (x_dim == 1) {
         y.row(count) = tempX;
       } else {
         y.rows(count, count + x_dim - 1) = tempX;
       }
-      modes.row(i) = old.q_0.row(i);
+      modes.row(i) = q_0.row(i);
       count += x_dim;
       i++;
     }
@@ -2093,8 +1581,8 @@ public:
               << std::endl;
     std::cin >> exportOpt;
     if ((exportOpt.compare(str0) == 0) || (exportOpt.compare(str1) == 0)) {
-      // check if results folder exists:
-      if (checkFolderExists("../results") == -1) {
+      // check if results fcurrenter exists:
+      if (checkFcurrenterExists("../results") == -1) {
         if (mkdir("../results", 0777) == -1) {
           std::cerr << "Error cannot create results directory: "
                     << std::strerror(errno) << std::endl;
@@ -2108,14 +1596,14 @@ public:
       myfile.close();
       std::string y_name = "../results/y_" + str + ".txt";
       y.save(y_name, arma::raw_ascii);
-      arma::mat q = old.q_0;
+      arma::mat q = q_0;
       std::string q_name = "../results/modes_" + str + ".txt";
       q.save(q_name, arma::raw_ascii);
-      old.createPySimPlots(y, modes, x_dim);
+      createPySimPlots(y, modes, x_dim);
     }
   }
-  bool obtainTqfromMat(const char *fn, shs_t &init) {
-    // Reading model file input in .arma::mat format
+  bool obtainTqfromMat(const char *fn) {
+    // Reading model file input in mat format
     // and storing into ssmodel class
     mat_t *matf;
     matvar_t *matvar, *contents;
@@ -2131,33 +1619,17 @@ public:
       if (contents == NULL) {
         init.Q = 1;
       } else {
-        init.populateTq(*contents);
+        populateTq(*contents);
         contents = NULL;
       }
       Mat_Close(matf);
 
-    } else // unsuccessfull in opening file
-    {
+    } else {
       return 1;
     }
   }
 
 private:
-  int checkData() {
-    int error = 0;
-    if ((unsigned)this->x_mod[0].x_dim != (unsigned)this->x_data.X[0].n_rows) {
-      error = 1;
-    }
-    if ((unsigned)this->x_mod[0].u_dim != (unsigned)this->x_data.U.n_cols &&
-        (unsigned)this->x_mod[0].u_dim > 0) {
-      error = 2;
-    }
-    if ((unsigned)this->x_mod[0].d_dim != (unsigned)this->x_data.D.n_cols &&
-        (unsigned)this->x_mod[0].d_dim > 0) {
-      error = 3;
-    }
-    return error;
-  }
   void populateTq(matvar_t &content) {
     ssmodels_t container;
 
@@ -2183,13 +1655,10 @@ private:
           str.append(";");
         }
         std::vector<std::string> x = splitStr(str, ';');
-        int numEl = x.size();
-        this->Q = numEl;
-
+        Q = x.size();
         // Check stochasticity of kernel
         arma::mat tq = strtodMatrix(x);
-        tq = checkStochasticity(tq);
-        this->Tq = tq;
+        Tq = checkStochasticity(tq);
       } else {
         std::cout << "Incorrect Tq format" << std::endl;
       }
@@ -2204,146 +1673,65 @@ private:
 template <> class shs_t<arma::mat, std::vector<int>> {
 public:
   std::vector<int> Q; // Discrete modes
-  std::vector<arma::mat>
+  std::optional<std::vector<arma::mat>>
       Tq; // Discrete kernel- can represent either guards or probabilities
   int n;  // Dimension of continuous state space in given mode
-  std::vector<arma::mat> p_k;
-  std::vector<arma::mat> q_0;    // Modes
-  std::vector<ssmodels_t> x_mod; // container of models
-  exdata_t x_data;
+  std::optional<std::vector<arma::mat>> p_k;
+  std::optional<std::vector<arma::mat>> q_0; // Modes
+  std::vector<ssmodels_t> x_mod;             // container of models
+  std::optional<exdata_t> x_data;
 
 private:
   bool sigmoid;
 
 public:
-  shs_t() {
-    Q = {1}; // Discrete modes
-    n = 1;   // Dimension of continuous state space in given mode
-    p_k = {arma::mat(Q[0], n)};
-    q_0 = {arma::mat(Q[0], 1)}; // Initial mode
-    std::vector<ssmodels_t> x_mod;
-    exdata_t x_data;
-    Tq = {arma::mat(n, n)};
-    sigmoid = false;
-  }
+  shs_t()
+      : Q{1}, n{1}, p_k{std::nullopt}, q_0{std::nullopt}, x_data{std::nullopt},
+        Tq{std::nullopt}, sigmoid{false} {}
   shs_t(std::vector<int> disc, int num, std::vector<arma::mat> tq,
-        std::vector<ssmodels_t> &old, exdata_t &data) {
-    Q = disc; // Discrete modes
-    n = num;  // Dimension of continuous state space in given mode
-    p_k = data.InitTq;
-    q_0 = data.q_init; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    sigmoid = false;
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        throw "Correct input vectors size";
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
+        std::vector<ssmodels_t> &current, exdata_t &data)
+      : Q{disc}, n{num}, x_data{data}, x_mod{current}, Tq{tq}, sigmoid{false} {
+    p_k = x_data.InitTq;
+    q_0 = x_data.q_init; // Initial mode
   }
-  shs_t(std::vector<arma::mat> tq, std::vector<ssmodels_t> &old,
-        exdata_t &data) {
-    Q = {1};          // Discrete modes
-    n = old[0].x_dim; // Dimension of continuous state space in given mode
-    p_k = data.InitTq;
-    q_0 = data.q_init; // Initial mode
-    x_mod = old;
-    x_data = data;
-    Tq = tq;
-    sigmoid = false;
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        throw "Correct input vectors size";
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
+
+  shs_t(std::vector<arma::mat> tq, std::vector<ssmodels_t> &current,
+        exdata_t &data)
+      : Q{1}, x_data{data}, x_mod{current}, Tq{tq}, sigmoid{false} {
+    n = x_mod[0].x_dim; // Dimension of continuous state
+                        // space in given mode
+    p_k = x_data.InitTq;
+    q_0 = x_data.q_init; // Initial mode
   }
-  shs_t(const char *fn, exdata_t &data, std::vector<int> NumModes) {
+  shs_t(const char *fn, exdata_t &data, std::vector<int> NumModes)
+      : x_data{data}, sigmoid{true} {
     // Obtain number of discrete modes and obtain Tq
     std::vector<int> num = {2, 2};
-
     Q = num;
-
     sigmoid = true;
     for (unsigned int m = 0; m < num.size(); m++) {
       Tq.push_back(arma::eye<arma::mat>(num[m], num[m]));
-      p_k.push_back(data.InitTq[m]);
-      q_0.push_back(data.q_init[m]); // Initial mode
+      p_k.push_back(x_data.InitTq[m]);
+      q_0.push_back(x_data.q_init[m]); // Initial mode
     }
-    x_data = data;
 
     // create array containing the ssmodels
     std::vector<ssmodels_t> models;
     arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
     for (int i = 1; i <= Q[0]; i++) {
-      int x_dimension = data.x_k.n_rows;
-      int u_dimension = data.u_k.n_rows;
-      int d_dimension = data.d_k.n_rows;
-      double lhs = arma::accu(data.u_k == dummy);
-      double rhs = arma::accu(data.d_k == dummy);
-      if ((lhs > 0) && (rhs > 0)) {
-        u_dimension = 0;
-        d_dimension = 0;
-      } else if ((lhs > 0) && (rhs == 0)) {
-        u_dimension = 0;
-      }
-      ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-      this->n = x_dimension; // TODO: update to handle different dimensions for
-                             // each state (Store)
-      // Reading models
-      mod.obtainSSfromMat(fn, mod, i);
-      if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-          (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-        mod.obtainSSfromMat(fn, mod);
-      }
-      mod.checkModel(mod);
+      n = x_data.x_k.n_rows;
+      ssmodels_t mod;
+      mod.obtainSSfromMat(fn, i);
+      mod.checkModel();
       models.push_back(mod);
     }
     x_mod = models;
-    try {
-      // Check dimensions of data
-      int err = this->checkData();
-      switch (err) {
-      case 3: {
-        throw "Incorrect size of disturbance vector";
-      }
-      default: {
-        std::cout << "Correct input vectors size" << std::endl;
-      }
-      }
-    } catch (const char *msg) {
-      std::cerr << msg << std::endl;
-      exit(0);
-    }
   }
 
-  shs_t(const char *fn, std::vector<int> NumModes) {
+  shs_t(const char *fn, std::vector<int> NumModes) : sigmoid{true} {
     // Obtain number of discrete modes and obtain Tq
     std::vector<int> num = {2, 2};
-
     Q = num;
-
-    sigmoid = true;
     for (unsigned int m = 0; m < num.size(); m++) {
       Tq.push_back(arma::eye<arma::mat>(num[m], num[m]));
     }
@@ -2351,47 +1739,36 @@ public:
     std::vector<ssmodels_t> models;
     arma::mat dummy = -1 * arma::ones<arma::mat>(1, 1);
     for (int i = 1; i <= Q[0]; i++) {
-      int x_dimension = this->x_mod[i].A.n_rows;
-      int u_dimension = this->x_mod[i].B.n_rows;
-      int d_dimension = this->x_mod[i].F.n_rows;
-      ssmodels_t mod(x_dimension, u_dimension, d_dimension);
-      this->n = x_dimension; // TODO: update to handle different dimensions for
-                             // each state (Store)
-      // Reading models
+      n = x_mod[i].A.n_rows;
       std::cout
           << "Initialising model of continuous variables in discrete mode " << i
           << std::endl;
-      mod.obtainSSfromMat(fn, mod, i);
-      if ((unsigned)x_dimension != (unsigned)mod.x_dim ||
-          (unsigned)x_dimension != (unsigned)mod.A.n_rows) {
-        mod.obtainSSfromMat(fn, mod);
-      }
-      mod.checkModel(mod);
+
+      ssmodels_t mod;
+      mod.obtainSSfromMat(fn, i);
+      mod.checkModel();
       models.push_back(mod);
     }
     x_mod = models;
   }
 
   virtual ~shs_t() {}
-  std::vector<int> t_q(shs_t &old, int q_old, int index) {
-    int steps = 1;
-    std::vector<int> modes(steps + 1);
+  std::vector<int> t_q(shs_t &current, int q_current, int index) {
+    std::vector<int> modes = {q_current};
 
-    modes[0] = q_old;
-    // if(old.x_mod[0].sigma.isZero(0) )
-    //{
     std::random_device rd;
     std::mt19937 gen(rd());
-    int count;
-    double sum, U;
+    int count = 0;
+    double sum = 0.0;
+    double U = 0.0;
     for (int i = 0; i < steps; i++) {
       count = 0;
       sum = 0;
       U = std::generate_canonical<double, 10>(gen);
       while (sum < U) {
-        sum += old.p_k[index](modes[i], count);
+        sum += p_k[index](modes[i], count);
         if (sum > U) {
-          modes[i + 1] = count;
+          modes.push_back(count);
         }
         count++;
       }
@@ -2400,161 +1777,133 @@ public:
     return modes;
   }
   // Dynamic model of continuous state
-  void step(shs_t &old, int n, int steps) {
-    arma::mat x_old(old.x_data.X[n]);
-    // arma::mat x_old = arma::mat(old.x_mod[(int) old.q_0[0](n,0)].x_dim,1);
-    // x_old = old.x_data.X[n];
-    arma::mat x_new = arma::mat(old.x_mod[(int)old.q_0[0](n, 0)].x_dim, steps);
+  void step(int n, int steps) {
+    arma::mat x_new = arma::mat(x_mod[(int)q_0[0](n, 0)].x_dim, steps);
+    arma::mat x_current = x_data.x_k;
+    arma::mat u_current = x_data.u_k;
+    arma::mat d_current = x_data.d_k;
 
-    // std::vector<double> vec(x_old.size());
-    // Eigen::Map<arma::mat>(vec.data(), x_old.n_rows, x_old.n_cols) =x_old; //
-
-    arma::mat u_old = arma::mat(old.x_mod[(int)old.q_0[0](n, 0)].u_dim, 1);
-    u_old = old.x_data.u_k;
-    arma::mat d_old = arma::mat(old.x_mod[(int)old.q_0[0](n, 0)].d_dim, 1);
-    d_old = old.x_data.d_k;
-
-    if (old.Q[0] == 1) {
-      x_new = old.x_mod[0].updateLTIst(old.x_mod[0], x_old, u_old, d_old);
+    if (Q[0] == 1) {
+      x_new = getNextStateFromCurrent(x_current, u_current, d_current);
     } else {
-
-      double equal =
-          arma::accu(old.x_mod[(int)old.q_0[0](n, 0)].sigma ==
-                     arma::zeros<arma::mat>(
-                         old.x_mod[(int)old.q_0[0](n, 0)].sigma.n_rows,
-                         old.x_mod[(int)old.q_0[0](n, 0)].sigma.n_cols));
+      double equal = arma::accu(
+          x_mod[(int)q_0[0](n, 0)].sigma ==
+          arma::zeros<arma::mat>(x_mod[(int)q_0[0](n, 0)].sigma.n_rows,
+                                 x_mod[(int)q_0[0](n, 0)].sigma.n_cols));
       if (equal > 0) {
         for (int j = 0; j < steps; j++) {
-          int q_0 = (int)old.q_0[0](n, j);
-          if (old.sigmoid) {
+          int q_0 = (int)q_0[0](n, j);
+          if (sigmoid) {
             // Generalise: assumes for now that only have pairs of discrete
             // modes
-            old.p_k[0](0, 0) = sigmoidCompute(x_old(0, 0), 100, 19.5);
-            old.p_k[0](0, 1) = 1 - old.p_k[0](0, 0);
-            old.p_k[0](1, 1) = 1 - old.p_k[0](0, 0);
-            old.p_k[0](1, 0) = old.p_k[0](1, 1);
-            std::cout << "Trans: " << old.p_k[0] << std::endl;
+            p_k[0](0, 0) = sigmoidCompute(x_current(0, 0), 100, 19.5);
+            p_k[0](0, 1) = 1 - p_k[0](0, 0);
+            p_k[0](1, 1) = 1 - p_k[0](0, 0);
+            p_k[0](1, 0) = p_k[0](1, 1);
+            std::cout << "Trans: " << p_k[0] << std::endl;
           } else {
             if (n > 0) {
-              old.p_k[0] = old.p_k[0] * old.Tq[0];
+              p_k[0] = p_k[0] * Tq[0];
             }
           }
-          std::vector<int> q = t_q(old, q_0, 0);
+          std::vector<int> q = t_q(q_0, 0);
           int q_new = q[1];
-          if (old.x_mod[(int)old.q_0[0](n, j)].d_dim == 0) {
-            x_new.col(j) = old.x_mod[q_new].updateLTI(
-                old.x_mod[(int)old.q_0[0](n, j)], x_old.col(j), u_old);
+          if (x_mod[(int)q_0[0](n, j)].d_dim == 0) {
+            x_new.col(j) = x_mod[q_new].getNextStateFromCurrent(
+                x_col(j), u_current, std::nullopt);
           } else {
-            x_new.col(j) = old.x_mod[q_new].updateLTIad(
-                old.x_mod[(int)old.q_0[0](n, j)], x_old.col(j), u_old, d_old);
+            x_new.col(j) = x_mod[q_new].getNextStateFromCurrent(
+                x_col(j), u_current, d_current);
           }
-          // Append result to Q in old object (columns)
-          old.q_0[0](n + 1, j) = q_new;
+          // Append result to Q in current object (columns)
+          q_0[0](n + 1, j) = q_new;
         }
       } else {
         // Get next state by updating p_k
         // Assumes continuous variables are affected by white noise
-        // described using gaussian distribution with mean x[k] = x_old,
+        // described using gaussian distribution with mean x[k] = x_current,
         // variance sigma
         // Compute conditional distribution for each mode
         for (int j = 0; j < steps; j++) {
           std::vector<int> q_0;
-          q_0.push_back(old.q_0[0](n, j));
-          q_0.push_back(old.q_0[1](n, j));
-          std::cout << "q_0: " << q_0[0] << ", x_old: " << x_old << " ,j: " << j
-                    << std::endl;
-          std::cout << "q_0: " << q_0[1] << ", x_old: " << x_old << " ,j: " << j
-                    << std::endl;
-
-          if (old.sigmoid) {
+          q_0.push_back(q_0[0](n, j));
+          q_0.push_back(q_0[1](n, j));
+          if (sigmoid) {
 
             // TODO:Generalise
-            old.p_k[0](0, 0) = sigmoidCompute(
-                x_old(0, 0), 10, 19.5); //*sigmoidCompute(x_old(1,0),1,21.25);
-            old.p_k[0](0, 1) = 1 - old.p_k[0](0, 0);
-            old.p_k[0](1, 1) = 1 - old.p_k[0](0, 0);
-            old.p_k[0](1, 0) = old.p_k[0](0, 0);
-            old.p_k[1](0, 0) = sigmoidCompute(
-                x_old(1, 0), 10, 21.25); //*sigmoidCompute(x_old(0,0),1,19.5);
-            old.p_k[1](0, 1) = 1 - old.p_k[1](0, 0);
-            old.p_k[1](1, 1) = 1 - old.p_k[1](0, 0);
-            old.p_k[1](1, 0) = old.p_k[1](0, 0);
-            std::cout << "Trans: " << old.p_k[0] << std::endl;
-            std::cout << "Trans: " << old.p_k[1] << std::endl;
+            p_k[0](0, 0) =
+                sigmoidCompute(x_current(0, 0), 10,
+                               19.5); //*sigmoidCompute(x_current(1,0),1,21.25);
+            p_k[0](0, 1) = 1 - p_k[0](0, 0);
+            p_k[0](1, 1) = 1 - p_k[0](0, 0);
+            p_k[0](1, 0) = p_k[0](0, 0);
+            p_k[1](0, 0) =
+                sigmoidCompute(x_current(1, 0), 10,
+                               21.25); //*sigmoidCompute(x_current(0,0),1,19.5);
+            p_k[1](0, 1) = 1 - p_k[1](0, 0);
+            p_k[1](1, 1) = 1 - p_k[1](0, 0);
+            p_k[1](1, 0) = p_k[1](0, 0);
+            std::cout << "Trans: " << p_k[0] << std::endl;
+            std::cout << "Trans: " << p_k[1] << std::endl;
           } else {
-            computeConditional(old, x_old, j, q_0[0]);
+            computeConditional(current, x_current, j, q_0[0]);
           }
 
           // Sample from conditional distribution to get q_new
-          std::vector<int> q0 = t_q(old, q_0[0], 0);
-          std::vector<int> q1 = t_q(old, q_0[1], 1);
+          std::vector<int> q0 = t_q(q_0[0], 0);
+          std::vector<int> q1 = t_q(q_0[1], 1);
           std::vector<int> q_new = {q0[1], q1[1]};
-          // Append result to Q in old object (columns)
-          old.q_0[0](n + 1, j) = q_new[0];
-          old.q_0[1](n + 1, j) = q_new[1];
+          // Append result to Q in current object (columns)
+          q_0[0](n + 1, j) = q_new[0];
+          q_0[1](n + 1, j) = q_new[1];
 
           // Assuming no reset kernels
           arma::mat x_up = arma::mat(1, 1);
 
-          if (old.x_mod[(int)old.q_0[0](n, j)].d_dim == 0) {
-            for (int k = 0; k < old.x_mod[q_new[0]].x_dim; k++) {
+          if (x_mod[(int)q_0[0](n, j)].d_dim == 0) {
+            for (int k = 0; k < x_mod[q_new[0]].x_dim; k++) {
+              x_up = x_mod[q_new[k]] getNextStateFromCurrent(
+                  x_col(j), std::nullopt, std::nullopt);
 
-              x_up = old.x_mod[q_new[k]].updateLTI(
-                  old.x_mod[(int)old.q_0[k](n, j)].A.row(k),
-                  old.x_mod[(int)old.q_0[k](n, j)].Q.row(k), x_old.col(j));
               x_new(k, j) =
-                  getSampleNormal(x_up(0, 0), old.x_mod[q_new[k]].sigma(k, 0));
+                  getSampleNormal(x_up(0, 0), x_mod[q_new[k]].sigma(k, 0));
             }
           } else {
-            for (int k = 0; k < old.x_mod[q_new[0]].x_dim; k++) {
-              x_up = old.x_mod[q_new[k]].updateLTIad(
-                  old.x_mod[(int)old.q_0[k](n, j)].A.row(k),
-                  old.x_mod[(int)old.q_0[k](n, j)].B.row(k),
-                  old.x_mod[(int)old.q_0[k](n, j)].F.row(k),
-                  old.x_mod[(int)old.q_0[k](n, j)].Q.row(k), x_old.col(j),
-                  u_old.row(k), d_old.row(k));
+            for (int k = 0; k < x_mod[q_new[0]].x_dim; k++) {
+              x_up = x_mod[q_new[k]].getNextStateFromCurrent(x_col(j), u_row(k),
+                                                             d_row(k));
               x_new(k, j) =
-                  getSampleNormal(x_up(0, 0), old.x_mod[q_new[k]].sigma(k, 0));
+                  getSampleNormal(x_up(0, 0), x_mod[q_new[k]].sigma(k, 0));
             }
           }
         }
       }
-      // Append result to X in old object (3rd dimension)
-      old.x_data.X.push_back(x_new);
+      // Append result to X in current object (3rd dimension)
+      x_data.X.push_back(x_new);
     }
   }
-  void computeConditional(shs_t &old, arma::mat x_old, int index, int q_old) {
+  void computeConditional(shs_t &current, arma::mat x_current, int index,
+                          int q_current) {
     double min = -1, max = 1;
     double val, err, xmin[1] = {}, xmax[1] = {};
     std::vector<double> v = {};
-    for (int i = 0; i < 2 * old.x_mod[q_old].x_dim; i++) {
-      if (i < old.x_mod[q_old].x_dim) {
+    for (int i = 0; i < 2 * x_mod[q_current].x_dim; i++) {
+      if (i < x_mod[q_current].x_dim) {
         xmin[i] = min;
         xmax[i] = max;
-        v.push_back(x_old(i, index)); //
-        std::cout << "v " << v[i] << std::endl;
+        v.push_back(x_current(i, index)); //
       } else {
         // TODO: Case when sigma is correlated
-        std::cout << "i-old.x_mod[q_old].x_dim: " << old.x_mod[q_old].x_dim
-                  << std::endl;
-        std::cout << "q_old " << q_old << std::endl;
-
-        v.push_back(old.x_mod[q_old].sigma(i - old.x_mod[q_old].x_dim, 0));
-        std::cout << "v " << v[i] << std::endl;
+        v.push_back(x_mod[q_current].sigma(i - x_mod[q_current].x_dim, 0));
       }
     }
-    val = 1; // hcubature(1, f_Gauss, &v,old.x_mod[n].x_dim, xmin,xmax,
+    val = 1; // hcubature(1, f_Gauss, &v,x_mod[n].x_dim, xmin,xmax,
              // 0,0,1e-12, ERROR_INDIVIDUAL, &val,&err);
     // std::cout << "Integral: " << val << std::endl;
     // Update p_k
-    if (n == 0) {
-      old.p_k[0] = old.Tq[0];
-    } else {
-      old.p_k[0] = old.p_k[0] * val * old.Tq[0];
-    }
-    // std::cout << "New kernel: " << old.p_k[0] << std::endl;
+    p_k[0] = n == 0 ? Tq[0] : p_k[0] * val * Tq[0];
   }
-  void run(shs_t &old, int N, int steps) {
+  void run(int N, int steps) {
     // Start simulation timers
     clock_t begin, end;
     begin = clock();
@@ -2564,31 +1913,31 @@ public:
     // For deterministic case perform 1 run
     // For stochastic version perform Monte Carlo + compute mean
     int i = 0;
-    int x_dim = old.x_mod[0].x_dim;
+    int x_dim = x_mod[0].x_dim;
     arma::mat y = arma::zeros<arma::mat>(N * x_dim, steps);
     arma::mat modes = arma::zeros<arma::mat>(N, steps);
-    old.p_k = old.Tq;
+    p_k = Tq;
     int count = 0;
     while (i < N) {
-      old.step(old, i, steps);
-      if (old.x_mod[0].u_dim > 0) {
-        if ((unsigned)old.x_data.U.n_rows == (unsigned)N) {
-          old.x_data.u_k = old.x_data.U.row(i);
+      step(i, steps);
+      if (x_mod[0].u_dim > 0) {
+        if ((unsigned)x_data.U.n_rows == (unsigned)N) {
+          x_data.u_k = x_data.U.row(i);
         }
       }
-      if (old.x_mod[0].d_dim > 0) {
-        if ((unsigned)old.x_data.D.n_rows == (unsigned)N) {
-          old.x_data.d_k = old.x_data.D.row(i);
+      if (x_mod[0].d_dim > 0) {
+        if ((unsigned)x_data.D.n_rows == (unsigned)N) {
+          x_data.d_k = x_data.D.row(i);
         }
       }
-      arma::mat tempX = old.x_data.X[i];
-      if (old.x_mod[0].x_dim == 1) {
+      arma::mat tempX = x_data.X[i];
+      if (x_mod[0].x_dim == 1) {
         y.row(count) = tempX;
       } else {
         y.rows(count, count + 1) = tempX;
       }
-      modes.row(i) = old.q_0[0].row(i);
-      count += old.x_mod[0].x_dim;
+      modes.row(i) = q_0[0].row(i);
+      count += x_mod[0].x_dim;
       i++;
     }
 
@@ -2617,8 +1966,8 @@ public:
               << std::endl;
     std::cin >> exportOpt;
     if ((exportOpt.compare(str0) == 0) || (exportOpt.compare(str1) == 0)) {
-      // check if results folder exists:
-      if (checkFolderExists("../results") == -1) {
+      // check if results fcurrenter exists:
+      if (checkFcurrenterExists("../results") == -1) {
         if (mkdir("../results", 0777) == -1) {
           std::cerr << "Error cannot create results directory: "
                     << std::strerror(errno) << std::endl;
@@ -2632,17 +1981,17 @@ public:
       myfile.close();
       std::string y_name = "../results/y_" + str + ".txt";
       y.save(y_name, arma::raw_ascii);
-      arma::mat q = old.q_0[0];
+      arma::mat q = q_0[0];
       std::string q_name = "../results/modes_" + str + ".txt";
       q.save(q_name, arma::raw_ascii);
     }
   }
-  void obtainTqfromMat(const char *fn, shs_t &init) {
-    // Reading model file input in .arma::mat format
+  void obtainTqfromMat(const char *fn) {
+    // Reading model file input in mat format
     // and storing into ssmodel class
     mat_t *matf;
     matvar_t *matvar, *contents;
-    // Read .arma::mat file
+    // Read mat file
     try {
       matf = Mat_Open(fn, MAT_ACC_RDONLY);
       if (matf) // if successful in reading file
@@ -2655,13 +2004,12 @@ public:
           std::cout << "Number of modes set to 1" << std::endl;
           init.Q[0] = 1;
         } else {
-          init.populateTq(*contents);
+          populateTq(*contents);
           // Mat_VarFree(matvar);
           matvar = NULL;
           contents = NULL;
         }
-      } else // unsuccessfull in opening file
-      {
+      } else {
         throw "Error opening mat file";
       }
       Mat_Close(matf);
@@ -2672,21 +2020,6 @@ public:
   }
 
 private:
-  int checkData() {
-    int error = 0;
-    if ((unsigned)this->x_mod[0].x_dim != (unsigned)this->x_data.X[0].n_rows) {
-      error = 1;
-    }
-    if ((unsigned)this->x_mod[0].u_dim != (unsigned)this->x_data.U.n_rows &&
-        (unsigned)this->x_mod[0].u_dim > 0) {
-      error = 2;
-    }
-    if ((unsigned)this->x_mod[0].d_dim != (unsigned)this->x_data.D.n_rows &&
-        (unsigned)this->x_mod[0].d_dim > 0) {
-      error = 3;
-    }
-    return error;
-  }
   void populateTq(matvar_t &content) {
     ssmodels_t container;
 
@@ -2712,15 +2045,11 @@ private:
           str.append(";");
         }
         std::vector<std::string> x = splitStr(str, ';');
-        int numEl = x.size();
-        std::cout << numEl << std::endl;
-        std::cout << "modes: " << numEl << std::endl;
-        this->Q[0] = numEl;
+        Q[0] = x.size();
 
         // Check stochasticity of kernel
         arma::mat tq = strtodMatrix(x);
-        tq = checkStochasticity(tq.t());
-        this->Tq[0] = tq;
+        Tq[0] = checkStochasticity(tq.t());
       } else {
         std::cout << "Incorrect Tq format" << std::endl;
       }

@@ -6,6 +6,7 @@
  */
 
 #include "Bmdp.h"
+#include <task_parallelisation/task_manager.h>
 
 #include <armadillo>
 #include <cstddef>

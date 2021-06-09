@@ -69,6 +69,7 @@ public:
   bmdp_t(taskSpec_t &myTask, shs_t<arma::mat, int> &inModel);
   void bmdpAbstraction(int T, int RA); // Generate the abstraction
   void getHybSysModes();               // Grid domain
+  void getSteps(int q); // computes the probabilitis starting from state q
   void getSteps(); // compute lower and upper probabtilities (uniform)
   void
   getSteps(double epsilon); // compute lower and upper probabilitoes (adaptive)

@@ -1716,22 +1716,22 @@ void bmdp_t::getStepsBasedonMedian(double epsilon, int T) {
 }
 // this function creates modes for each dynamics whose covariance matrix is
 // non-diagonal for general type
-void bmdp_t::getStepsNonDiag() {
-  // initialize the matrices
-  clock_t begin, end;
-  double time;
-  begin = clock();
+
+/* 
+ * Computes the transition probabilities starting from a given grid cell.
+ *
+ * @param q the cell for which to compute the transition probabilities
+ * 
+ * @note it is threadsafe - uses steps_mutex
+ */
+void bmdp_t::getStepsNonDiag(int q) {
   size_t num_dyn = this->mode.size();
   size_t num_states = this->states.n_elem + 1;
-  size_t currentrow = 0;
-  size_t index = 0;
-  arma::sp_mat Smin(num_dyn * num_states, num_states);
-  arma::sp_mat Smax(num_dyn * num_states, num_states);
   size_t ogg_index = 0;
-  for (size_t q = 0; q < num_states - 1; ++q) {
-    for (size_t a = 0; a < num_dyn; ++a) {
 
-      currentrow = (q)*num_dyn + a;
+  for (size_t a = 0; a < num_dyn; ++a) {
+
+      int currentrow = (q)*num_dyn + a;
       size_t HSmode = a;
 
       arma::mat A = this->desc.dyn.dynamics[a].A;
@@ -1759,6 +1759,7 @@ void bmdp_t::getStepsNonDiag() {
       arma::mat qprime_TF(qpost_TF.n_rows, qpost_TF.n_cols);
       double pmin = 0, pmax = 0;
 
+      int index = 0;
       for (size_t qprime = 0; qprime < this->mode[HSmode].states.n_elem - 1;
            ++qprime) {
 
@@ -1769,12 +1770,14 @@ void bmdp_t::getStepsNonDiag() {
             qpost_TF, qprime_TF, this->desc.dyn.dynamics[HSmode].x_dim);
         pmax = this->getMaxTranProbNonDiag(
             qpost_TF, qprime_TF, this->desc.dyn.dynamics[HSmode].x_dim);
-        Smin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
-        Smax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
+
+        steps_mutex.lock();
+        this -> Stepsmin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
+        this -> Stepsmax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
+        steps_mutex.unlock();
 
         index++;
       }
-      index = 0;
       // for the out-of-boundary state pmin = 1-pmax
       qprime_TF = TransferMatrix * this->desc.boundary;
 
@@ -1813,28 +1816,47 @@ void bmdp_t::getStepsNonDiag() {
                                          this->desc.dyn.dynamics[HSmode].x_dim);
       }
 
-      Smin(currentrow, num_states - 1) = 1 - pmax;
-      Smax(currentrow, num_states - 1) = 1 - pmin;
+      steps_mutex.lock();
+      this -> Stepsmin(currentrow, num_states - 1) = 1 - pmax;
+      this -> Stepsmax(currentrow, num_states - 1) = 1 - pmin;
+      steps_mutex.unlock();
     }
-  }
+}
+
+void bmdp_t::getStepsNonDiag() {
+  // initialize the matrices
+  clock_t begin, end;
+  double time;
+  begin = clock();
+  size_t num_dyn = this->mode.size();
+  size_t num_states = this->states.n_elem + 1;
+  
+  this -> Stepsmin = arma::sp_mat(num_dyn * num_states, num_states);
+  this -> Stepsmax = arma::sp_mat(num_dyn * num_states, num_states);
+
+  std::vector<int> tasks;
+  for (size_t q = 0; q < num_states - 1; ++q) 
+    tasks.push_back(q);
+
+  task_manager<int, void> manager(tasks, 
+          [&](int q) { getStepsNonDiag(q); });
+  manager.run();
+
   // self transition for the out-of-boundary state
   size_t q = num_states;
   for (size_t a = 0; a < num_dyn; ++a) {
-    currentrow = (q - 1) * num_dyn + a;
-    Smin(currentrow, num_states - 1) = 1;
-    Smax(currentrow, num_states - 1) = 1;
+    int currentrow = (q - 1) * num_dyn + a;
+    Stepsmin(currentrow, num_states - 1) = 1;
+    Stepsmax(currentrow, num_states - 1) = 1;
   }
-
-  this->Stepsmin = Smin;
-  this->Stepsmax = Smax;
 
   end = clock();
   time = (double)(end - begin) / CLOCKS_PER_SEC;
   // ------------------------------------------------
   // sanity check
   // ------------------------------------------------
-  arma::mat stepsmin = arma::conv_to<arma::mat>::from(Smin);
-  arma::mat stepsmax = arma::conv_to<arma::mat>::from(Smax);
+  arma::mat stepsmin = arma::conv_to<arma::mat>::from(this -> Stepsmin);
+  arma::mat stepsmax = arma::conv_to<arma::mat>::from(this -> Stepsmax);
 
   arma::mat minSum = arma::sum(stepsmin.t());
   arma::mat maxSum = arma::sum(stepsmax.t());

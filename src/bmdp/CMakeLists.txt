@@ -36,6 +36,7 @@ target_link_libraries(bmdp
   PUBLIC ${ARMA_LIB} 
   PUBLIC ${GINAC_LIB}
   PUBLIC nlopt
+  PUBLIC task_parallelisation
   PUBLIC BMDP_LIB)
 
 add_custom_command(

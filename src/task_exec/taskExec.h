@@ -472,9 +472,8 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
   case 3: // model checking using BMDP
   {
     // Initialise timers
-    clock_t begin, end;
-    double time;
-    begin = clock();
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
 
     // Get model definitions
     input.myModel.x_mod[0].F = arma::eye(input.myModel.n, input.myModel.n);
@@ -595,8 +594,8 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       }
     }
 
-    end = clock();
-    time = (double)(end - begin) / CLOCKS_PER_SEC;
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    double time = 1.0 * std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() / 1000000;
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
     std::ofstream myfile;

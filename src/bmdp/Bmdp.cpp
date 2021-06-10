@@ -1414,9 +1414,8 @@ void bmdp_t::getSteps() {
   std::vector<int> tasks;
   for (size_t q = 0; q < this->states.n_rows; ++q) 
     tasks.push_back(q);
-
   task_manager<int, void> manager(tasks, 
-          [&](int q) { getStepsNonDiag(q); });
+          [&](int q) { getSteps(q); });
   manager.run();
 
   // self transition for the out-of-boundary state
@@ -1748,7 +1747,6 @@ void bmdp_t::getStepsNonDiag(int q) {
   size_t ogg_index = 0;
 
   for (size_t a = 0; a < num_dyn; ++a) {
-
       int currentrow = (q)*num_dyn + a;
       size_t HSmode = a;
 

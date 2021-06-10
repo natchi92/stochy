@@ -12,6 +12,8 @@ add_library(task_parallelisation SHARED
     ${CMAKE_CURRENT_SOURCE_DIR}/include/task_parallelisation/task_manager.h
 )
 
+target_link_libraries( task_parallelisation pthread )
+
 target_include_directories(task_parallelisation 
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

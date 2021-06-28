@@ -9,6 +9,7 @@ add_executable(stochy_2d_eg Main_2D_eg.cpp)
 add_executable(stochy_ane_ra Main_Ane_Ra.cpp)
 add_executable(stochy_ane_safety Main_Ane_Safety.cpp)
 add_executable(stochy_binary Main_Binary.cpp)
+add_executable(stochy_arch Main_ARCH.cpp)
 
 target_link_libraries(stochy 
   PRIVATE case_studies 
@@ -47,6 +48,10 @@ target_link_libraries(stochy_ane_safety
   PRIVATE task_exec)
 
 target_link_libraries(stochy_binary
+  PRIVATE common
+  PRIVATE task_exec)
+
+target_link_libraries(stochy_arch
   PRIVATE common
   PRIVATE task_exec)
 

@@ -1294,10 +1294,8 @@ void bmdp_t::getSteps(int q) {
 
 
       arma::mat Qcheck = arma::round(Qpost * 1e5) * 1e-5;
-      bool isQdiag = true;
-      if (Qcheck(0, 1) != 0) {
-        isQdiag = false;
-      }
+      bool isQdiag = (Qcheck(0, 1) == 0);
+      
       bool sigCheck = (std::round(sigx * 1e5) != std::round(sigy * 1e5));
       if (!isQdiag && sigCheck) {
         throw "Covariance Matrices are NOT scalar * identity";
@@ -1760,10 +1758,8 @@ void bmdp_t::getStepsNonDiag(int q) {
       float sigy = std::sqrt(Qpost(1, 1));
 
       arma::mat Qcheck = arma::round(Qpost * 1e5) * 1e-5;
-      bool isQdiag = true;
-      if (Qcheck(0, 1) != 0) {
-        isQdiag = false;
-      }
+      bool isQdiag = (Qcheck(0, 1) == 0);
+
       bool sigCheck = (std::round(sigx * 1e5) != std::round(sigy * 1e5));
       if (!isQdiag && sigCheck) {
         throw "Covariance Matrices are NOT scalar * identity";

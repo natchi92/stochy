@@ -819,6 +819,58 @@ static arma::umat vec_inpolygon(int Nv, double x1, double y1, arma::mat xv,
   return in;
 }
 
+/* 
+ * Whether a point is on a segment - in 2D.
+ *
+ * @note The point is considered on if it is no more than
+ *       an epsilon distance away from the segment. The
+ *       epsilon scales linearly with the length of the 
+ *       segment to allow for different scales.
+ * 
+ * Input:  
+ *    @param seg_a first 2D point of the segment
+ *    @param seg_b second 2D point of the segment
+ *    @param point the 2D point to be checked
+ */ 
+static bool on_segment(arma::vec seg_a, arma::vec seg_b, arma::vec point) {
+  double seg_length = std::sqrt(arma::dot(seg_a, seg_b));
+
+  // The maximum allowed distance from the segment 
+  double eps = 1e-10 * seg_length;
+
+  if( point(0) - eps > std::max(seg_a(0), seg_b(0)) || 
+      point(0) + eps < std::min(seg_a(0), seg_b(0)) || 
+      point(1) - eps > std::max(seg_a(1), seg_b(1)) || 
+      point(1) + eps < std::min(seg_a(1), seg_b(1)) )
+    return false;
+
+  return area(seg_a, seg_b, point) <= seg_length * eps;
+}
+
+/* 
+ * Whether a point is on the boundary of a 2D polygon
+ *
+ * @note The point is considered on if it is no more than
+ *       an epsilon distance away from the polygon's 
+ *       boundary. The epsilon scales linearly with the 
+ *       length of each edge to allow for different scales.
+ * 
+ * Input: 
+ *    @param polygon the 2D polygon: has 2 rows and at least 3 columns
+ *    @param point the 2D point to be checked
+ */ 
+static bool on_boundary(arma::mat polygon, arma::vec point) {
+  if(polygon.n_rows != 2)
+    throw "This function only supports 2d polygons";
+  if(polygon.n_cols < 3) 
+    throw "This function only supports polygons - at least 3 vertices";
+
+  for(int i = 0; i < polygon.n_cols; i++) 
+    if(on_segment(polygon.col(i), polygon.col((i+1) % polygon.n_cols), point))
+      return true;
+  return false;
+}
+
 // Check if point is in polygon using ray-casting
 // I run a semi-infinite ray horizontally (increasing x, fixed y) out from the
 // test point, and count how many edges it crosses. At each crossing, the ray
@@ -853,6 +905,12 @@ static int pnpoly(int nvert, arma::mat vertx, arma::mat verty, arma::mat testx,
   arma::mat xyv = close_loops(vertx, verty);
   arma::umat in =
       vec_inpolygon(xyv.n_cols, testx, testy, xyv.row(0).t(), xyv.row(1).t());
+  
+  for(int i=0; i < in.n_elem; i++) {
+    if(in(i)) continue;
+    in(i) = on_boundary(xyv, {testx(i), testy(i)});
+  }
+
   int in_acc = arma::accu(in);
   if (in_acc == nvert) {
     return 1;
@@ -898,6 +956,12 @@ static int pnspoly(int nvert, arma::mat vertx, arma::mat verty, arma::mat testx,
 
   arma::umat in =
       vec_inpolygon(xyv.n_cols, testx, testy, xyv.row(0).t(), xyv.row(1).t());
+  
+  for(int i=0; i < in.n_elem; i++) {
+    if(in(i)) continue;
+    in(i) = on_boundary(xyv, {testx(i), testy(i)});
+  }
+
   int in_acc = arma::accu(in);
   return in_acc;
 }

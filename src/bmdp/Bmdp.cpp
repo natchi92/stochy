@@ -2113,6 +2113,9 @@ arma::vec bmdp_t::getGridNondiagRA(arma::mat boundary, arma::mat gridsize,arma::
     ycells(endy + 1) = newpoint;
   }
 
+  // whether the reach set is convex or not 
+  bool convex_phi2 = v_phi2[0][c_mode].n_rows == 2 && is_convex(v_phi2[0][c_mode]);
+
   // compute the vertices of each cell grid
   arma::cube ver_all(boundary.n_rows, boundary.n_cols,
                      (xcells.n_elem * ycells.n_elem + 1));
@@ -2195,7 +2198,11 @@ arma::vec bmdp_t::getGridNondiagRA(arma::mat boundary, arma::mat gridsize,arma::
           }
         }
         // Check if within phi2
-        if (pnpoly(std::pow(2, this->desc.dyn.dynamics[0].x_dim),
+        // if phi2 is convex, we are sure the grid cell is completely inside
+        // phi2 - both are convex and the vertices are inside => no need to 
+        // split it further 
+        if (!convex_phi2 && 
+            pnpoly(std::pow(2, this->desc.dyn.dynamics[0].x_dim),
                    v_phi2[1][c_mode].row(0), v_phi2[1][c_mode].row(1), v.row(0),
                    v.row(1))) {
           in_phi = 1;

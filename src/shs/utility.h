@@ -44,6 +44,83 @@ enum Library {simulator =1 , mdp=2, imdp=3};
 enum grid {uniform =1 , adaptive=2};
 enum property {verify_safety=1, verify_reach_avoid=2,synthesis_safety=3, synthesis_reach_avoid=4};
 
+/* 
+ * The signed area of a 2d triangle defined by its vertices 
+ * 
+ * Algo:
+ *  Computes the determinant of the matrix
+ *    | x1  y1  1 |
+ *    | x2  y2  1 |
+ *    | x3  y3  1 |
+ *  where 
+ *    p1 = [x1, y1]
+ *    p2 = [x2, y2]
+ *    p3 = [x3, y3]
+ * 
+ * Input:
+ *  @param p1 first vertex of the triangle
+ *  @param p2 second vertex of the triangle
+ *  @param p3 third vertex of the triangle
+ * 
+ */ 
+static double signed_area(arma::vec p1, arma::vec p2, arma::vec p3) {
+  if( arma::approx_equal(p1, p2, "reldiff", 1e-3) ||
+      arma::approx_equal(p2, p3, "reldiff", 1e-3) ||
+      arma::approx_equal(p3, p1, "reldiff", 1e-3))
+    return 0;
+
+  double area2 =  (p1(0) - p2(1)) * (p1(0) - p2(1)) +
+                  (p2(0) - p3(1)) * (p2(0) - p3(1)) +
+                  (p3(0) - p1(1)) * (p3(0) - p1(1)) ;
+
+  int sign = area2 > 0 ? 1 : -1;
+  return sign * std::sqrt(std::abs(area2));
+}
+
+/* 
+ * The area of a 2d triangle defined by its vertices 
+ * 
+ * Input:
+ *  @param p1 first vertex of the triangle
+ *  @param p2 second vertex of the triangle
+ *  @param p3 third vertex of the triangle
+ */ 
+static double area(arma::vec p1, arma::vec p2, arma::vec p3) {
+  return std::abs(signed_area(p1, p2, p3));
+}
+
+/* 
+ * Whether the given 2D polygon is convex 
+ * 
+ * Pre: - the give matrix p represents a 2D polygon
+ *        with the vertices in the order on the boundary
+ *      - the polygon p has at least 3 vertices 
+ * 
+ * Input:
+ *  @param p a matrix that represents a 2D polygon
+ * 
+ */ 
+static bool is_convex(arma::mat p) {
+  if(p.n_rows != 2)
+    throw "This function only supports 2d polygons";
+  if(p.n_cols < 3) 
+    throw "This function only supports polygons - at least 3 vertices";
+
+  double s_area = signed_area(p.col(0), p.col(1), p.col(2));
+  if(s_area == 0) return false;
+  
+  // whether the vertices are in trigonometric order
+  bool trig_order = s_area > 0;
+  
+  for(int i = 1; i < p.n_cols; i++) {
+    s_area = signed_area(p.col(i), p.col((i+1)%p.n_cols), p.col((i+2)%p.n_cols));
+    if(trig_order != s_area > 0 || s_area == 0)
+      return false;
+  }
+
+  return true;
+}
+
 // function to check whether a folder exists
 // according to given path
 static int checkFolderExists(const char *path) {

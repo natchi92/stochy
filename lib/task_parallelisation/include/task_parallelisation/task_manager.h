@@ -21,15 +21,14 @@ protected:
     virtual void worker() = 0;
     bool get_task(T &task);
 
+    int progress_bar_size;
+    int initial_no_tasks;
+    int progress_bar_fill; // number of dots showed in the progress bar
+
 public:
     task_manager_base(bag<T>* m_bag, 
                  std::function<R(T)> task_solver,
-                 int thread_pool_size = DEFAULT_THREAD_POOL_SIZE);
-    task_manager_base(const std::vector<T>& tasks, 
-                 std::function<R(T)> task_solver,
-                 int thread_pool_size = DEFAULT_THREAD_POOL_SIZE);
-    task_manager_base(const T* tasks, int n, 
-                 std::function<R(T)> task_solver,
+                 int progress_bar_size = 0,
                  int thread_pool_size = DEFAULT_THREAD_POOL_SIZE);
     ~task_manager_base();
 };
@@ -61,26 +60,13 @@ public:
 template <typename T, typename R> 
 task_manager_base<T, R>::task_manager_base( bag<T>* m_bag, 
                                             std::function<R(T)> task_solver,
+                                            int progress_bar_size,
                                             int thread_pool_size)
                                 : m_bag(m_bag), task_solver(task_solver),
-                                  thread_pool_size(thread_pool_size) { }
-
-template <typename T, typename R> 
-task_manager_base<T, R>::task_manager_base( const std::vector<T>& tasks, 
-                                            std::function<R(T)> task_solver,
-                                            int thread_pool_size)
-                                : task_solver(task_solver),
+                                  progress_bar_size(progress_bar_size),
                                   thread_pool_size(thread_pool_size) { 
-    m_bag = new vector_bag<T>(tasks);
-}
-
-template <typename T, typename R> 
-task_manager_base<T, R>::task_manager_base( const T* tasks, int n, 
-                                            std::function<R(T)> task_solver,
-                                            int thread_pool_size)
-                                : task_solver(task_solver),
-                                  thread_pool_size(thread_pool_size) { 
-    m_bag = new vector_bag<T>(tasks, n);
+    initial_no_tasks = m_bag -> no_tasks();
+    progress_bar_fill = -1;
 }
 
 template <typename T, typename R> 
@@ -107,6 +93,23 @@ bool task_manager_base<T, R>::get_task(T& task){
         get_task_mutex.unlock();
         return false;
     }
+
+    int fill = (1.0 - (double) m_bag -> no_tasks() / initial_no_tasks) * progress_bar_size;
+    if(progress_bar_size > 0 && progress_bar_fill < fill ) {
+        progress_bar_fill = fill;
+        int i = 0;
+        for(; i < progress_bar_size + 2; i ++)
+            std::cout << '\b';
+        std::cout << '[';
+        for( i = 0; i < fill; i ++)
+            std::cout << '.';
+        for( ; i < progress_bar_size; i ++)
+            std::cout << ' ';
+        std::cout<<"]";
+        if(m_bag -> empty())
+            std::cout<<'\n';
+    }
+
     task = m_bag -> next();
     get_task_mutex.unlock();
     return true;

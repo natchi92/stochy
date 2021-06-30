@@ -6,8 +6,9 @@ class bag {
 public:
     virtual ~bag() = 0;
 
-    virtual T    next()  = 0;    
-    virtual bool empty() = 0;
+    virtual T    next()     = 0;    
+    virtual bool empty()    = 0;
+    virtual int  no_tasks() = 0;
 };
 
 
@@ -22,6 +23,7 @@ public:
 
     T    next();
     bool empty();
+    int  no_tasks();
 };
 
 template <typename T>
@@ -53,4 +55,9 @@ T vector_bag<T>::next() {
 template <typename T>
 bool vector_bag<T>::empty() {
     return tasks -> empty();
+} 
+
+template <typename T>
+int vector_bag<T>::no_tasks() {
+    return tasks -> size();
 } 

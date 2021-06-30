@@ -4,7 +4,7 @@
 #include <thread>
 #include <mutex>
 
-#define DEFAULT_THREAD_POOL_SIZE 35
+#define DEFAULT_THREAD_POOL_SIZE 40
 
 template <typename T, typename R>
 class task_manager_base {

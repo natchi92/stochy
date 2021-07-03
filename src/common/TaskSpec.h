@@ -19,18 +19,18 @@ public:
   int propertySpec; // 1-safety, 2-reach and avoid, 3 - formula free (FAUST),
   // 1 - safety verification, 2 - safety synthesis, 3 - RA verification, 4 - RA
   // synthesis FAUST related inputs
-  arma::mat safeSet;
-  arma::mat targetSet;
-  arma::mat inputSet;
+  std::optional<arma::mat> safeSet;
+  std::optional<arma::mat> targetSet;
+  std::optional<arma::mat> inputSet;
   double eps;
   int typeGrid;          // 1- Uniform Grid, 2- Local Adaptive, 3 - MCMC approx
   int assumptionsKernel; // 1- Lipschitz via Integral, 2- Lipschitz via sample,
                          // 3- Max-min
   int Controlled;
   // BMDP related
-  arma::mat boundary;
-  arma::mat gridsize;
-  arma::mat reftol;
+  std::optional<arma::mat>  boundary;
+  std::optional<arma::mat> gridsize;
+  std::optional<arma::mat>  reftol;
 
 public:
   taskSpec_t();

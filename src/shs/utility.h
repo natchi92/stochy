@@ -48,7 +48,7 @@ enum property {
 
 // function to check whether a folder exists
 // according to given path
-static int checkFolderExists(const char *path) {
+static int checkFolderExists(const char *path) const {
   struct stat info;
 
   if (stat(path, &info) != 0) {
@@ -61,7 +61,7 @@ static int checkFolderExists(const char *path) {
 }
 
 // find Location of characters in string
-static std::vector<int> findLocation(std::string str, char findIt) {
+static std::vector<int> findLocation(std::string str, char findIt) const {
   std::vector<int> characterLocations;
   for (unsigned int i = 0; i < str.size(); i++) {
     if (str[i] == findIt)
@@ -72,7 +72,7 @@ static std::vector<int> findLocation(std::string str, char findIt) {
 
 // function to split string according to chosen
 // delimeter
-static std::vector<std::string> splitStr(const std::string &s, char delim) {
+static std::vector<std::string> splitStr(const std::string &s, char delim) const {
   std::vector<std::string> elems;
   std::stringstream ss(s);
   std::string item;
@@ -83,7 +83,7 @@ static std::vector<std::string> splitStr(const std::string &s, char delim) {
   return elems;
 }
 
-static arma::mat strtodMatrix(std::vector<std::string> M) {
+static arma::mat strtodMatrix(std::vector<std::string> M) const {
   arma::mat m = arma::zeros<arma::mat>(M.size(), M.size());
   std::vector<std::string> elem;
   for (unsigned int j = 0; j < M.size(); j++) {
@@ -99,7 +99,7 @@ static arma::mat strtodMatrix(std::vector<std::string> M) {
   return m;
 }
 
-static arma::mat strtodMatrix(std::vector<std::string> M, unsigned cols) {
+static arma::mat strtodMatrix(std::vector<std::string> M, unsigned cols) const {
   arma::mat m = arma::zeros<arma::mat>(M.size(), cols);
   std::vector<std::string> elem;
   for (unsigned int j = 0; j < M.size(); j++) {
@@ -115,7 +115,7 @@ static arma::mat strtodMatrix(std::vector<std::string> M, unsigned cols) {
 }
 
 // convert arma matrix to array of std::vectors
-static std::vector<std::vector<double>> mat_to_std_vec(arma::mat &A) {
+static std::vector<std::vector<double>> mat_to_std_vec(arma::mat &A) const{
   std::vector<std::vector<double>> V(A.n_rows);
   for (size_t i = 0; i < A.n_rows; ++i) {
     V[i] = arma::conv_to<std::vector<double>>::from(A.row(i));
@@ -127,7 +127,7 @@ static std::vector<std::vector<double>> mat_to_std_vec(arma::mat &A) {
 // sum of row / sum of col == 1
 // If not stochastic normalising using the largest
 // value in row to be so
-static arma::mat checkStochasticity(arma::mat m) {
+static arma::mat checkStochasticity(arma::mat m) const {
   arma::mat r = sum(m, 1);
 
   if (accu(r) > m.n_rows) {
@@ -149,7 +149,7 @@ static arma::mat checkStochasticity(arma::mat m) {
 
 // delete column from arma matrix
 // index of column to remove is colToRemove
-static void removeColumn(arma::mat &matrix, unsigned int colToRemove) {
+static void removeColumn(arma::mat &matrix, unsigned int colToRemove) const {
   unsigned int numRows = matrix.n_rows;
   unsigned int numCols = matrix.n_cols - 1;
 
@@ -163,15 +163,13 @@ static void removeColumn(arma::mat &matrix, unsigned int colToRemove) {
 // compute the sigmoid function value given the
 // input variable y and the sigmoid parameters d (dimension) and
 // alpha (to control steepness)
-static double sigmoidCompute(double y, double d, double alpha) {
-
-  double beta = std::pow(y, d) / (std::pow(alpha, d) + std::pow(y, d));
-  return beta;
+static double sigmoidCompute(double y, double d, double alpha) const {
+  return std::pow(y, d) / (std::pow(alpha, d) + std::pow(y, d));
 }
 
 // Obtain a sample value form the normal Distribution
 // described via its mean and variance
-static double getSampleNormal(double mean, double var) {
+static double getSampleNormal(double mean, double var) const {
   std::random_device rd{};
   std::mt19937 gen{rd()};
   double updated = 0;
@@ -196,7 +194,7 @@ static arma::mat readInputSignal(const char *t_path) {
   }
 }
 
-static int hashCode(const arma::mat &a) {
+static int hashCode(const arma::mat &a) const {
   if (a.is_empty()) {
     return 0;
   }
@@ -210,7 +208,7 @@ static int hashCode(const arma::mat &a) {
 }
 
 // Find unique rows in a matrix: equivalent to matlab unique(A,'rows') function
-static arma::mat unique_rows(const arma::mat &x) {
+static arma::mat unique_rows(const arma::mat &x) const {
   unsigned int count = 1, nr = x.n_rows, nc = x.n_cols;
 
   arma::mat result(nr, nc);
@@ -315,6 +313,7 @@ static std::vector<int> Union(int arr1[], int arr2[], int m, int n) {
 // [ a 0 0;
 //   0 b 0;
 //   0 0 c];
+//TODO(ncauchi): this can be done more efficiently
 static void checkDiagonal(arma::mat mat) {
   try {
     unsigned sizeC_mat = mat.n_cols;

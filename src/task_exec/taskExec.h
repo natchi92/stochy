@@ -12,7 +12,7 @@
 #include "FAUST.h"
 #include "InputSpec.h"
 
-static void performTask(inputSpec_t<arma::mat, int> input)  {
+static void performTask(inputSpec_t<arma::mat, int> &input) const {
   switch (input.myTask.task) {
   case 1: // Perform simulation depending on model type
   {
@@ -54,21 +54,21 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
                 << std::endl;
       exit(0);
     }
+    //TODO(ncauchi) are the inputs required here?
     input.myModel.run(input.myModel, input.myTask.T, input.myTask.runs);
-
 
     break;
   }
   case 2: // Perform verification task depending on model and tool to be
           // interfaced with
   {
-    faust_t myF;
-    shs_t<arma::mat, int> myModel = input.myModel;
-    myF.model = myModel;
+    // faust_t myF;
+    // shs_t<arma::mat, int> myModel = input.myModel;
+    // myF.model = myModel;
     try {
       // Check if dynamics are ill-scaled
       // Obtaining problem definition
-      clock_t begin, end;
+      clock_t begin, end; //TODO(ncauchi) change to use std::chrono
       begin = clock();
       double time = 0;
 
@@ -77,25 +77,25 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       int Distribution = input.myTask.assumptionsKernel;
       int Control = input.myTask.Controlled;
 
-
-      // Problem variables
+      // Problem variablesmyF
       double epsilon = input.myTask.eps;
       int N = input.myTask.T;
-      shs_t<arma::mat, int> model = input.myModel;
+      // shs_t<arma::mat, int> model = input.myModel;
 
       // Get Safe, Input and Target set
       arma::mat SafeSet = input.myTask.safeSet;
       arma::mat InputSet = input.myTask.inputSet;
       arma::mat TargetSet = input.myTask.targetSet;
 
-      faust_t taskFAUST = myF;
+      faust_t taskFAUST = myF; //TODO(ncauchi) what is the difference between faust_t and the input model; do better calling
+
       // Check correctness of SafeSet input
       if (SafeSet.n_cols != 2) {
         std::cout << "There is no correctly defined Safe Set";
         exit(0);
       }
-      double temp = arma::accu((SafeSet.col(1) - SafeSet.col(0)) < 0);
-      if (temp > 0) {
+      int temp = static_cast<int>(arma::accu((SafeSet.col(1) - SafeSet.col(0)) < 0));
+      if (temp) {
         std::cout << "The edges of the Safe Set must have positive length. "
                      "Make sure that the first column is the lower bound and "
                      "the second column is the upper bound";
@@ -107,21 +107,21 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       arma::mat min_Ss = arma::min(SafeSet);
       double diff_Ss = max_Ss(1) - min_Ss(0);
       arma::mat j = arma::eye<arma::mat>(SafeSet.n_rows, SafeSet.n_rows);
-      if(diff_Ss > 50) {
+      if (diff_Ss > 50) {
         // Identify row with smallest values to rescale to that
-        arma::mat min_row = arma::min(SafeSet,0);
-        arma::mat OrSS = SafeSet ; // The original Safeset definition
+        arma::mat min_row = arma::min(SafeSet, 0);
+        arma::mat OrSS = SafeSet; // The original Safeset definition
         arma::mat to_inv = OrSS;
-        for(unsigned i =0; i < OrSS.n_rows; i++) {
-          if(min_row(0,1) != SafeSet(i,1)) {
+        for (unsigned i = 0; i < OrSS.n_rows; i++) {
+          if (min_row(0, 1) != SafeSet(i, 1)) {
             SafeSet.row(i) = min_row;
           }
         }
         arma::mat y_inv = arma::diagmat(min_row);
-        arma::mat j_bar = OrSS/y_inv;
+        arma::mat j_bar = OrSS / y_inv;
         j = j_bar.replace(arma::datum::inf, 0);
-        for(unsigned k = 0; k < model.x_mod.size(); k++) {
-          taskFAUST.model.x_mod[k].sigma = arma::inv(j)*model.x_mod[k].sigma;
+        for (unsigned k = 0; k < model.x_mod.size(); k++) {
+          taskFAUST.model.x_mod[k].sigma = arma::inv(j) * model.x_mod[k].sigma;
         }
       }
       if (Control == 0) {
@@ -182,7 +182,7 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
                                      // statements since it is slower
       // For multiple modes store the Tq for each mode in a vector
       std::vector<std::vector<arma::mat>> Tp_all;
-      for(size_t i = 0; i < input.myModel.Q; i++) {
+      for (size_t i = 0; i < input.myModel.Q; i++) {
         // Get current model to perform abstraction and task on
         input.myModel.x_mod[0] = input.myModel.x_mod[i];
         taskFAUST.myKernel(input.myModel);
@@ -257,38 +257,37 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
           // resulting error is half of the outcome error.
           taskFAUST.E = 0.5 * taskFAUST.E;
 
-  	       // Creation of Markov Chain
+          // Creation of Markov Chain
           if (Distribution == 2) {
             taskFAUST.MCapprox(epsilon);
           } else {
             taskFAUST.MCcreator(epsilon);
           }
           // Calculation of the resulting problem
-          if(input.myModel.Q == 1) {
+          if (input.myModel.Q == 1) {
             switch (Problem) {
-              case 100: {
-                taskFAUST.StandardProbSafety(N);
-                end = clock();
-                time = (double)(end - begin) / CLOCKS_PER_SEC;
-                break;
+            case 100: {
+              taskFAUST.StandardProbSafety(N);
+              end = clock();
+              time = (double)(end - begin) / CLOCKS_PER_SEC;
+              break;
             }
             case 200: {
               taskFAUST.StandardReachAvoid(TargetSet, N);
               end = clock();
               time = (double)(end - begin) / CLOCKS_PER_SEC;
               break;
-             }
-             default: {
-               std::cout << "This options is not available yet. Work in progress.";
-               exit(0);
-             }
-             break;
-           }
-          }
-          else {
+            }
+            default: {
+              std::cout
+                  << "This options is not available yet. Work in progress.";
+              exit(0);
+            } break;
+            }
+          } else {
             Tp_all.push_back(taskFAUST.Tp);
           }
-        //  }
+          //  }
           break;
         }
         case 1: {
@@ -310,8 +309,8 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
             break;
           }
           case 211: {
-            taskFAUST.Uniform_grid_ReachAvoid_Contr(epsilon, N, SafeSet, InputSet,
-                                                    TargetSet);
+            taskFAUST.Uniform_grid_ReachAvoid_Contr(epsilon, N, SafeSet,
+                                                    InputSet, TargetSet);
             break;
           }
           case 221: {
@@ -329,12 +328,13 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
             break;
           }
           case 112: {
-            taskFAUST.Uniform_grid_MCapprox_Contr(epsilon, N, SafeSet, InputSet);
+            taskFAUST.Uniform_grid_MCapprox_Contr(epsilon, N, SafeSet,
+                                                  InputSet);
             break;
           }
           case 212: {
-            taskFAUST.Uniform_grid_ReachAvoidMCapprox_Contr(epsilon, N, SafeSet,
-                                                            InputSet, TargetSet);
+            taskFAUST.Uniform_grid_ReachAvoidMCapprox_Contr(
+                epsilon, N, SafeSet, InputSet, TargetSet);
             break;
           }
           case 222: {
@@ -367,49 +367,48 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
             taskFAUST.MCcreator_Contr(epsilon);
           }
           // Calculation of the resulting problem
-          if(input.myModel.Q == 1) {
+          if (input.myModel.Q == 1) {
             switch (Problem) {
-              case 100: {
-                taskFAUST.StandardProbSafety_Contr(N);
-                end = clock();
-                time = (double)(end - begin) / CLOCKS_PER_SEC;
+            case 100: {
+              taskFAUST.StandardProbSafety_Contr(N);
+              end = clock();
+              time = (double)(end - begin) / CLOCKS_PER_SEC;
               break;
             }
             case 200: {
               taskFAUST.StandardReachAvoid_Contr(TargetSet, N);
               end = clock();
-  	          time = (double)(end - begin) / CLOCKS_PER_SEC;
-  	           break;
-             }
-             default: {
-               std::cout << "This options is not available yet. Work in progress.";
-               exit(0);
-             }
-             break;
-           }
-          }
-          else {
+              time = (double)(end - begin) / CLOCKS_PER_SEC;
+              break;
+            }
+            default: {
+              std::cout
+                  << "This options is not available yet. Work in progress.";
+              exit(0);
+            } break;
+            }
+          } else {
             Tp_all.push_back(taskFAUST.Tp);
           }
         }
-       }
-       // Get current time to time stamp outputs
-       auto t = std::time(nullptr);
-       auto tm = *std::localtime(&t);
-       std::ostringstream oss;
-       oss << std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
-       auto str = oss.str();
+        }
+        // Get current time to time stamp outputs
+        auto t = std::time(nullptr);
+        auto tm = *std::localtime(&t);
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
+        auto str = oss.str();
 
-       // Rescale grid axis to original axis
-       arma::vec inter_d  = arma::ones<arma::vec>(taskFAUST.X.n_rows);
-       for(unsigned d = 0; d < taskFAUST.X.n_cols/2; d++) {
-         inter_d = j(d,d)*inter_d;
-         taskFAUST.X.col(d) = inter_d%taskFAUST.X.col(d);
-         inter_d = arma::ones<arma::vec>(taskFAUST.X.n_rows);
-       }
-       if(input.myModel.Q == 1) {
-         taskFAUST.formatOutput(time, str, Problem, N);
-       }
+        // Rescale grid axis to original axis
+        arma::vec inter_d = arma::ones<arma::vec>(taskFAUST.X.n_rows);
+        for (unsigned d = 0; d < taskFAUST.X.n_cols / 2; d++) {
+          inter_d = j(d, d) * inter_d;
+          taskFAUST.X.col(d) = inter_d % taskFAUST.X.col(d);
+          inter_d = arma::ones<arma::vec>(taskFAUST.X.n_rows);
+        }
+        if (input.myModel.Q == 1) {
+          taskFAUST.formatOutput(time, str, Problem, N);
+        }
       }
       // For multiple modes only now that I have obtained all the
       //  Transition probabilities I need to perform parallel composition
@@ -417,29 +416,29 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       // Tp_all contains all the Tp matrices
       // For Safety ---------------------------------------
       // TODO Check > 2D for safety + REACH AVOID
-      if(input.myModel.Q > 1) {
+      if (input.myModel.Q > 1) {
         arma::mat Tq = input.myModel.Tq;
         // for each mode compute V
         // first get Tp for first control
         std::vector<arma::mat> Tpall;
-        for(size_t qd = 0; qd < input.myModel.Q; qd++) {
+        for (size_t qd = 0; qd < input.myModel.Q; qd++) {
           Tpall.push_back(Tp_all[qd][0]);
         }
         // Compute V for first one
         taskFAUST.StandardProbSafety(input.myModel.Q, Tq, Tpall, N);
         // Where we are storing all the Value functions for each control
         int u_dim = 1;
-        if(!taskFAUST.U.is_empty()) {
-          u_dim= taskFAUST.U.n_rows;
+        if (!taskFAUST.U.is_empty()) {
+          u_dim = taskFAUST.U.n_rows;
         }
         arma::mat Vall(taskFAUST.V.n_rows, u_dim);
         // store first computed V for first control in first column
-        Vall.col(0) =taskFAUST.V;
+        Vall.col(0) = taskFAUST.V;
 
         // Iteratively compute for all remaining control
         Tpall.clear();
-        for(size_t ud = 1; ud < u_dim; ud++) {
-          for(size_t qd = 0; qd < input.myModel.Q; qd++) {
+        for (size_t ud = 1; ud < u_dim; ud++) {
+          for (size_t qd = 0; qd < input.myModel.Q; qd++) {
             Tpall.push_back(Tp_all[qd][ud]);
           }
           // Compute the next value function
@@ -496,10 +495,10 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
         exit(0);
       }
     }
-  //  if (input.myModel.Q > 2) {
-  //    std::cout << "Work in progress, will be available shortly" << std::endl;
-  //    exit(0);
-  //  }
+    //  if (input.myModel.Q > 2) {
+    //    std::cout << "Work in progress, will be available shortly" <<
+    //    std::endl; exit(0);
+    //  }
     // Set number of actions
     taskBMDP.actNum = input.myModel.Q;
 
@@ -526,25 +525,26 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       exit(0);
     }
     // Check if need to rescale boundary
-    arma::mat proj = arma::eye<arma::mat>(taskBMDP.desc.boundary.n_rows, taskBMDP.desc.boundary.n_rows);
-  /*  arma::mat max_Ss = arma::max(taskBMDP.desc.boundary );
-    arma::mat min_Ss = arma::min(taskBMDP.desc.boundary );
-    double diff_Ss = max_Ss(1) - min_Ss(0);
-    if(diff_Ss > 100) {
-      // Identify row with smallest values to rescale to that
-      arma::mat min_row = arma::min(taskBMDP.desc.boundary ,0);
-      arma::mat OrSS = taskBMDP.desc.boundary ; // The original Safeset definition
-      arma::mat to_inv = OrSS;
-      for(unsigned i =0; i < OrSS.n_rows; i++) {
-        taskBMDP.desc.boundary.row(i) = min_row;
-      }
-      arma::mat y_inv = arma::diagmat(min_row);
-      arma::mat j_bar = OrSS/y_inv;
-      proj = j_bar.replace(arma::datum::inf, 0);
-      for(unsigned k = 0; k < input.myModel.Q; k++) {
-        taskBMDP.desc.dyn.dynamics[k].sigma = arma::inv(proj)*taskBMDP.desc.dyn.dynamics[k].sigma;
-      }
-    }*/
+    arma::mat proj = arma::eye<arma::mat>(taskBMDP.desc.boundary.n_rows,
+                                          taskBMDP.desc.boundary.n_rows);
+    /*  arma::mat max_Ss = arma::max(taskBMDP.desc.boundary );
+      arma::mat min_Ss = arma::min(taskBMDP.desc.boundary );
+      double diff_Ss = max_Ss(1) - min_Ss(0);
+      if(diff_Ss > 100) {
+        // Identify row with smallest values to rescale to that
+        arma::mat min_row = arma::min(taskBMDP.desc.boundary ,0);
+        arma::mat OrSS = taskBMDP.desc.boundary ; // The original Safeset
+      definition arma::mat to_inv = OrSS; for(unsigned i =0; i < OrSS.n_rows;
+      i++) { taskBMDP.desc.boundary.row(i) = min_row;
+        }
+        arma::mat y_inv = arma::diagmat(min_row);
+        arma::mat j_bar = OrSS/y_inv;
+        proj = j_bar.replace(arma::datum::inf, 0);
+        for(unsigned k = 0; k < input.myModel.Q; k++) {
+          taskBMDP.desc.dyn.dynamics[k].sigma =
+      arma::inv(proj)*taskBMDP.desc.dyn.dynamics[k].sigma;
+        }
+      }*/
 
     taskBMDP.eps = input.myTask.eps;
     // Constructing the abstraction
@@ -553,7 +553,7 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
     // Identify if performing synthesis or verification
     // and whether safety or reach avoid
     int RA = 0;
-    if (input.myTask.propertySpec == 2 ||input.myTask.propertySpec == 4 ) {
+    if (input.myTask.propertySpec == 2 || input.myTask.propertySpec == 4) {
       RA = 1;
     }
     taskBMDP.bmdpAbstraction(input.myTask.T, RA);
@@ -566,7 +566,7 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
       std::cout << "Performing  model checking " << std::endl;
       taskBMDP.createSynthFile(phi1, labels);
       if (input.myTask.propertySpec == 1) {
-          taskBMDP.runSafety(1e-4, input.myTask.T);
+        taskBMDP.runSafety(1e-4, input.myTask.T);
       } else {
         taskBMDP.runSynthesis(1e-4, input.myTask.T);
       }
@@ -606,32 +606,33 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
 
     // TODO: Rescale grid axis to original axis
     int dim = taskBMDP.desc.boundary.n_rows;
-    if(dim == 2) {
-        arma::mat inter_d  = arma::ones<arma::mat>(1,dim);
-        for (unsigned i = 0; i < taskBMDP.mode.size(); ++i) {
-          for(unsigned p = 0; p < taskBMDP.mode[i].vertices.size(); p++){
-            for(unsigned d = 0; d < dim; d++) {
-              inter_d = proj(d,d)*inter_d;
-              if(taskBMDP.mode[i].vertices[p].n_cols == 4){
-                taskBMDP.mode[i].vertices[p].resize(dim,2);
-              }
-              taskBMDP.mode[i].vertices[p].row(d)= inter_d%taskBMDP.mode[i].vertices[p].row(d);
-              inter_d = arma::ones<arma::mat>(1,dim);
+    if (dim == 2) {
+      arma::mat inter_d = arma::ones<arma::mat>(1, dim);
+      for (unsigned i = 0; i < taskBMDP.mode.size(); ++i) {
+        for (unsigned p = 0; p < taskBMDP.mode[i].vertices.size(); p++) {
+          for (unsigned d = 0; d < dim; d++) {
+            inter_d = proj(d, d) * inter_d;
+            if (taskBMDP.mode[i].vertices[p].n_cols == 4) {
+              taskBMDP.mode[i].vertices[p].resize(dim, 2);
             }
+            taskBMDP.mode[i].vertices[p].row(d) =
+                inter_d % taskBMDP.mode[i].vertices[p].row(d);
+            inter_d = arma::ones<arma::mat>(1, dim);
           }
         }
-        for(unsigned d = 0; d < dim; d++) {
-          inter_d = proj(d,d)*inter_d;
-          if(taskBMDP.desc.boundary.n_cols== 4){
-            arma::vec minb = arma::min(taskBMDP.desc.boundary,1);
-            arma::vec maxb = arma::max(taskBMDP.desc.boundary,1);
-            taskBMDP.desc.boundary.resize(dim,2);
-            taskBMDP.desc.boundary.col(0) = minb;
-            taskBMDP.desc.boundary.col(1) = maxb;
-          }
-          taskBMDP.desc.boundary.row(d)= inter_d%taskBMDP.desc.boundary.row(d);
-          inter_d = arma::ones<arma::mat>(1,dim);
+      }
+      for (unsigned d = 0; d < dim; d++) {
+        inter_d = proj(d, d) * inter_d;
+        if (taskBMDP.desc.boundary.n_cols == 4) {
+          arma::vec minb = arma::min(taskBMDP.desc.boundary, 1);
+          arma::vec maxb = arma::max(taskBMDP.desc.boundary, 1);
+          taskBMDP.desc.boundary.resize(dim, 2);
+          taskBMDP.desc.boundary.col(0) = minb;
+          taskBMDP.desc.boundary.col(1) = maxb;
         }
+        taskBMDP.desc.boundary.row(d) = inter_d % taskBMDP.desc.boundary.row(d);
+        inter_d = arma::ones<arma::mat>(1, dim);
+      }
     }
     taskBMDP.formatOutput(time, str);
 
@@ -645,7 +646,8 @@ static void performTask(inputSpec_t<arma::mat, int> input)  {
                    "policy [y- yes, n - no]"
                 << std::endl;
       std::cin >> exportOpt;
-      if ((exportOpt.compare(str) == 0) || (exportOpt.compare(str1) == 0)|| (exportOpt.compare(str2) == 0)) {
+      if ((exportOpt.compare(str) == 0) || (exportOpt.compare(str1) == 0) ||
+          (exportOpt.compare(str2) == 0)) {
         std::cout << "Simulation of model using optimal policy" << std::endl;
         arma::mat init(2, 1);
         init(0, 0) = -0.5;

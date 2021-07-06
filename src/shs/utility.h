@@ -44,6 +44,83 @@ enum Library {simulator =1 , mdp=2, imdp=3};
 enum grid {uniform =1 , adaptive=2};
 enum property {verify_safety=1, verify_reach_avoid=2,synthesis_safety=3, synthesis_reach_avoid=4};
 
+/* 
+ * The signed area of a 2d triangle defined by its vertices 
+ * 
+ * Algo:
+ *  Computes the determinant of the matrix
+ *    | x1  y1  1 |
+ *    | x2  y2  1 |
+ *    | x3  y3  1 |
+ *  where 
+ *    p1 = [x1, y1]
+ *    p2 = [x2, y2]
+ *    p3 = [x3, y3]
+ * 
+ * Input:
+ *  @param p1 first vertex of the triangle
+ *  @param p2 second vertex of the triangle
+ *  @param p3 third vertex of the triangle
+ * 
+ */ 
+static double signed_area(arma::vec p1, arma::vec p2, arma::vec p3) {
+  if( arma::approx_equal(p1, p2, "reldiff", 1e-3) ||
+      arma::approx_equal(p2, p3, "reldiff", 1e-3) ||
+      arma::approx_equal(p3, p1, "reldiff", 1e-3))
+    return 0;
+
+  double area2 =  (p1(0) - p2(1)) * (p1(0) - p2(1)) +
+                  (p2(0) - p3(1)) * (p2(0) - p3(1)) +
+                  (p3(0) - p1(1)) * (p3(0) - p1(1)) ;
+
+  int sign = area2 > 0 ? 1 : -1;
+  return sign * std::sqrt(std::abs(area2));
+}
+
+/* 
+ * The area of a 2d triangle defined by its vertices 
+ * 
+ * Input:
+ *  @param p1 first vertex of the triangle
+ *  @param p2 second vertex of the triangle
+ *  @param p3 third vertex of the triangle
+ */ 
+static double area(arma::vec p1, arma::vec p2, arma::vec p3) {
+  return std::abs(signed_area(p1, p2, p3));
+}
+
+/* 
+ * Whether the given 2D polygon is convex 
+ * 
+ * Pre: - the give matrix p represents a 2D polygon
+ *        with the vertices in the order on the boundary
+ *      - the polygon p has at least 3 vertices 
+ * 
+ * Input:
+ *  @param p a matrix that represents a 2D polygon
+ * 
+ */ 
+static bool is_convex(arma::mat p) {
+  if(p.n_rows != 2)
+    throw "This function only supports 2d polygons";
+  if(p.n_cols < 3) 
+    throw "This function only supports polygons - at least 3 vertices";
+
+  double s_area = signed_area(p.col(0), p.col(1), p.col(2));
+  if(s_area == 0) return false;
+  
+  // whether the vertices are in trigonometric order
+  bool trig_order = s_area > 0;
+  
+  for(int i = 1; i < p.n_cols; i++) {
+    s_area = signed_area(p.col(i), p.col((i+1)%p.n_cols), p.col((i+2)%p.n_cols));
+    if(trig_order != s_area > 0 || s_area == 0)
+      return false;
+  }
+
+  return true;
+}
+
 // function to check whether a folder exists
 // according to given path
 static int checkFolderExists(const char *path) {
@@ -742,6 +819,58 @@ static arma::umat vec_inpolygon(int Nv, double x1, double y1, arma::mat xv,
   return in;
 }
 
+/* 
+ * Whether a point is on a segment - in 2D.
+ *
+ * @note The point is considered on if it is no more than
+ *       an epsilon distance away from the segment. The
+ *       epsilon scales linearly with the length of the 
+ *       segment to allow for different scales.
+ * 
+ * Input:  
+ *    @param seg_a first 2D point of the segment
+ *    @param seg_b second 2D point of the segment
+ *    @param point the 2D point to be checked
+ */ 
+static bool on_segment(arma::vec seg_a, arma::vec seg_b, arma::vec point) {
+  double seg_length = std::sqrt(arma::dot(seg_a, seg_b));
+
+  // The maximum allowed distance from the segment 
+  double eps = 1e-10 * seg_length;
+
+  if( point(0) - eps > std::max(seg_a(0), seg_b(0)) || 
+      point(0) + eps < std::min(seg_a(0), seg_b(0)) || 
+      point(1) - eps > std::max(seg_a(1), seg_b(1)) || 
+      point(1) + eps < std::min(seg_a(1), seg_b(1)) )
+    return false;
+
+  return area(seg_a, seg_b, point) <= seg_length * eps;
+}
+
+/* 
+ * Whether a point is on the boundary of a 2D polygon
+ *
+ * @note The point is considered on if it is no more than
+ *       an epsilon distance away from the polygon's 
+ *       boundary. The epsilon scales linearly with the 
+ *       length of each edge to allow for different scales.
+ * 
+ * Input: 
+ *    @param polygon the 2D polygon: has 2 rows and at least 3 columns
+ *    @param point the 2D point to be checked
+ */ 
+static bool on_boundary(arma::mat polygon, arma::vec point) {
+  if(polygon.n_rows != 2)
+    throw "This function only supports 2d polygons";
+  if(polygon.n_cols < 3) 
+    throw "This function only supports polygons - at least 3 vertices";
+
+  for(int i = 0; i < polygon.n_cols; i++) 
+    if(on_segment(polygon.col(i), polygon.col((i+1) % polygon.n_cols), point))
+      return true;
+  return false;
+}
+
 // Check if point is in polygon using ray-casting
 // I run a semi-infinite ray horizontally (increasing x, fixed y) out from the
 // test point, and count how many edges it crosses. At each crossing, the ray
@@ -776,6 +905,12 @@ static int pnpoly(int nvert, arma::mat vertx, arma::mat verty, arma::mat testx,
   arma::mat xyv = close_loops(vertx, verty);
   arma::umat in =
       vec_inpolygon(xyv.n_cols, testx, testy, xyv.row(0).t(), xyv.row(1).t());
+  
+  for(int i=0; i < in.n_elem; i++) {
+    if(in(i)) continue;
+    in(i) = on_boundary(xyv, {testx(i), testy(i)});
+  }
+
   int in_acc = arma::accu(in);
   if (in_acc == nvert) {
     return 1;
@@ -821,6 +956,12 @@ static int pnspoly(int nvert, arma::mat vertx, arma::mat verty, arma::mat testx,
 
   arma::umat in =
       vec_inpolygon(xyv.n_cols, testx, testy, xyv.row(0).t(), xyv.row(1).t());
+  
+  for(int i=0; i < in.n_elem; i++) {
+    if(in(i)) continue;
+    in(i) = on_boundary(xyv, {testx(i), testy(i)});
+  }
+
   int in_acc = arma::accu(in);
   return in_acc;
 }

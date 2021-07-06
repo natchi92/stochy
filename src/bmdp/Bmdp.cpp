@@ -337,15 +337,22 @@ void bmdp_t::getHybSysModes() {
     // If sigma is ever non diagonal update boundary
     // as need more info
     if (!isDiagonal(this->desc.dyn.dynamics[d].sigma)) {
-      arma::mat boundary = arma::zeros<arma::mat>(2, 4);
-      boundary(0, 0) = this->desc.boundary(0, 0);
-      boundary(0, 1) = this->desc.boundary(0, 0);
-      boundary(0, 2) = this->desc.boundary(0, 1);
-      boundary(0, 3) = boundary(0, 2);
-      boundary(1, 0) = this->desc.boundary(1, 0);
-      boundary(1, 1) = this->desc.boundary(1, 1);
-      boundary(1, 2) = boundary(1, 1);
-      boundary(1, 3) = boundary(1, 0);
+      arma::mat boundary = arma::zeros<arma::mat>(this->desc.dyn.dynamics[0].A.n_rows, 4);
+
+      for (size_t i = 0; i < dim-1; i=i+2)
+      {
+
+        boundary(i, 0) = this->desc.boundary(i, 0);
+        boundary(i, 1) = this->desc.boundary(i, 0);
+        boundary(i, 2) = this->desc.boundary(i, 1);
+        boundary(i, 3) = this->desc.boundary(i, 1);
+     
+        boundary(i+1, 0) = this->desc.boundary(i+1, 0);
+        boundary(i+1, 1) = this->desc.boundary(i+1, 1);
+        boundary(i+1, 2) = this->desc.boundary(i+1, 1);
+        boundary(i+1, 3) = this->desc.boundary(i+1, 0);
+      }
+           
       this->desc.boundary = boundary;
     }
   }
@@ -618,7 +625,6 @@ double bmdp_t::checkPmax(double pmax, arma::mat qpost_TF, arma::mat qprime_TF,si
     double Xb = qprime_TF(i, 1); // max
 
     arma::mat temp = {{Xa, Xb}};
-    //	std::cout << "temp: " << temp << std::endl;
     if (i == 0) {
       vd = temp;
     } else {
@@ -648,7 +654,6 @@ double bmdp_t::checkPmax(double pmax, arma::mat qpost_TF, arma::mat qprime_TF,si
   // Check if center of qprime is in q
   arma::mat qprime_ctr = arma::mean(qprime_TF, 1);
   qprime_ctr = join_horiz(qprime_ctr, qprime_ctr);
-  //	std::cout << "qprime_ctr: " << qprime_ctr << std::endl;
   if (pnHyperRect(qprime_ctr, qpost_TF)) {
     for (unsigned j = 0; j < 2; ++j) {
       for (unsigned i = 0; i < dim; ++i) {
@@ -657,7 +662,6 @@ double bmdp_t::checkPmax(double pmax, arma::mat qpost_TF, arma::mat qprime_TF,si
         inner *= std::erf(lower) - std::erf(upper);
       }
       prob(j + 2) = std::abs(outer * inner);
-      //			std::cout << "prob: " << prob << std::endl;
       inner = 1;
     }
   }
@@ -879,7 +883,6 @@ double bmdp_t::getMaxTranProbNonDiag(arma::mat qpost_TF, arma::mat qprime_TF,siz
     std::cout << "nlopt failed: " << e.what() << std::endl;
     exit(0);
   }
-  //	std::cout << minf2 << std::endl;
   arma::vec res(1);
   res << minf2;
   if (res(0) > 0) {
@@ -1086,13 +1089,11 @@ double bmdp_t::getMaxTranProb2Rect(arma::mat qpost_TF, arma::mat qprime_TF,arma:
 
   // Check if center of qprime is in q
   // TODO: Generalise
-  // std::cout << "qprime_ctr: " << qprime_ctr;
 
   qprime_ctr = arma::ones<arma::vec>(size_qp * size_qp + 1) * qprime_ctr(0, 0);
   qprime_ctr =
       join_vert(qprime_ctr, arma::ones<arma::vec>(size_qp * size_qp + 1) *
                                 qprime_ctr(1, 0));
-  // std::cout << "qprime_ctr: " << qprime_ctr(0, 0);
 
   arma::vec prob = arma::zeros<arma::vec>(qpost_TF.n_cols + 1);
 
@@ -1115,7 +1116,6 @@ double bmdp_t::getMaxTranProb2Rect(arma::mat qpost_TF, arma::mat qprime_TF,arma:
     }
 
     prob(0) = std::abs(outer * arma::sum(inner));
-    //		std::cout << "prob: " << prob << std::endl;
 
   } else {
     nlopt::opt opt2(nlopt::GN_DIRECT_L_RAND_NOSCAL, dim);
@@ -1147,7 +1147,6 @@ double bmdp_t::getMaxTranProb2Rect(arma::mat qpost_TF, arma::mat qprime_TF,arma:
     }
     prob(0) = res(0);
   }
-  // std::cout << qpost_TF << std::endl;
   inner = arma::ones<arma::vec>(qprime_TF.n_cols);
 
   for (size_t k = 0; k < size_qp; k++) {
@@ -1155,13 +1154,12 @@ double bmdp_t::getMaxTranProb2Rect(arma::mat qpost_TF, arma::mat qprime_TF,arma:
       arma::vec xnew = arma::ones<arma::vec>(qprime_TF.n_cols);
       double qnew = qpost_TF(i, k);
       xnew = xnew * qnew;
-      // std::cout << "xnew: " << xnew << std::endl;
+
       arma::vec lower =
           ((vd(arma::span(i * qprime_TF.n_cols, (i + 1) * qprime_TF.n_cols - 1),
                1) -
             xnew) /
            denom);
-      // std::cout << "lower: " << lower << std::endl;
       arma::vec upper =
           ((vd(arma::span(i * qprime_TF.n_cols, (i + 1) * qprime_TF.n_cols - 1),
                0) -
@@ -1171,10 +1169,8 @@ double bmdp_t::getMaxTranProb2Rect(arma::mat qpost_TF, arma::mat qprime_TF,arma:
       inner %= arma::erf(lower) - arma::erf(upper);
     }
     prob(k + 1) = std::abs(outer * arma::sum(inner));
-    //		std::cout << "prob(k): " << prob(k + 1) << std::endl;
     inner = arma::ones<arma::vec>(qprime_TF.n_cols);
   }
-  //	std::cout << "prob: " << prob << std::endl;
   return arma::max(prob);
 }
 double bmdp_t::getMaxTranProb(arma::mat qpost_TF, arma::mat qprime_TF,size_t dim) {
@@ -1191,7 +1187,6 @@ double bmdp_t::getMaxTranProb(arma::mat qpost_TF, arma::mat qprime_TF,size_t dim
     double Xb = qprime_TF(i, 1); // max
 
     arma::mat temp = {{Xa, Xb}};
-    //	std::cout << "temp: " << temp << std::endl;
     if (i == 0) {
       vd = temp;
     } else {
@@ -2491,6 +2486,7 @@ arma::vec bmdp_t::getGrid(arma::mat boundary, arma::mat gridsize, arma::mat tol,
   std::vector<double> validcellnum;
 
   int slices = std::pow((cells.n_cols / 2), x_dim);
+  std::cout << "NC: slices " << slices << ", b " << boundary << std::endl;
   arma::cube ver_all(boundary.n_rows, boundary.n_cols, slices);
   arma::mat boundary_tol = boundary;
   boundary.col(1) = boundary.col(1) + 0.99995 * tol.t();

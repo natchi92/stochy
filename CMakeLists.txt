@@ -35,6 +35,7 @@ option (NLOPT_GUILE "build guile bindings" OFF)
 option (NLOPT_SWIG "use SWIG to build bindings" OFF)
 add_subdirectory(lib/nlopt)
 add_subdirectory(lib/cubature)
+add_subdirectory(lib/task_parallelisation)
 
 # restore install() command
 macro (install)

@@ -6,6 +6,7 @@
  */
 
 #include "Bmdp.h"
+#include <task_parallelisation/task_manager.h>
 
 #include <armadillo>
 #include <cstddef>
@@ -1255,136 +1256,93 @@ double bmdp_t::getMaxTranProb(arma::mat qpost_TF, arma::mat qprime_TF,size_t dim
 
   return res(0);
 }
-// this function creates modes for each dynamics whose covariance matrix is
-// non-diagonal for general type
-void bmdp_t::getSteps() {
-  // initialize the matrices
+
+/* 
+ * Computes the transition probabilities starting from a given grid cell.
+ *
+ * @param q the cell for which to compute the transition probabilities
+ * 
+ * @note it is threadsafe - uses steps_mutex
+ */
+void bmdp_t::getSteps(int q) {
   size_t num_dyn = this->mode.size();
   size_t num_states = this->states.n_elem + 1;
-  size_t currentrow = 0;
-  size_t index = 0, x_dim = this->desc.dyn.dynamics[0].x_dim;
-  arma::sp_mat Smin(num_dyn * num_states, num_states);
-  arma::sp_mat Smax(num_dyn * num_states, num_states);
-
+  size_t index = 0;
+  size_t x_dim = this->desc.dyn.dynamics[0].x_dim;
   double pminCheck = -1, pmaxCheck = -1;
-  for (size_t q = 0; q < this->states.n_rows; ++q) {
-    for (size_t a = 0; a < num_dyn; ++a) {
+  
+  for (size_t a = 0; a < num_dyn; ++a) {
 
-      currentrow = (q)*num_dyn + a;
-      size_t HSmode = this->desc.dyn.mode[a];
+    int currentrow = (q)*num_dyn + a;
+    size_t HSmode = this->desc.dyn.mode[a];
 
-      // Get boundary in transformed space
-      arma::mat A = this->desc.dyn.dynamics[a].A;
-      arma::mat F = this->desc.dyn.dynamics[a].F;
-      arma::mat Sigma = this->desc.dyn.dynamics[a].sigma;
-      arma::mat TransferMatrix, Qpost, qpost, qpost_TF;
-      if (A.n_cols == 1) {
-        TransferMatrix = this->desc.mode[HSmode].transfermatrix(0, 0);
-        Qpost = TransferMatrix * F * Sigma * F.t() * TransferMatrix.t();
-        qpost = A * this->vertices(0, 0, q);
-        qpost_TF = TransferMatrix * qpost;
-      } else {
-        TransferMatrix = this->desc.mode[HSmode].transfermatrix;
-        Qpost = TransferMatrix * F * Sigma * F.t() * TransferMatrix.t();
-        float sigx = std::sqrt(Qpost(0, 0));
-        float sigy = std::sqrt(Qpost(1, 1));
+    // Get boundary in transformed space
+    arma::mat A = this->desc.dyn.dynamics[a].A;
+    arma::mat F = this->desc.dyn.dynamics[a].F;
+    arma::mat Sigma = this->desc.dyn.dynamics[a].sigma;
+    arma::mat TransferMatrix, Qpost, qpost, qpost_TF;
+    if (A.n_cols == 1) {
+      TransferMatrix = this->desc.mode[HSmode].transfermatrix(0, 0);
+      Qpost = TransferMatrix * F * Sigma * F.t() * TransferMatrix.t();
+      qpost = A * this->vertices(0, 0, q);
+      qpost_TF = TransferMatrix * qpost;
+    } else {
+      TransferMatrix = this->desc.mode[HSmode].transfermatrix;
+      Qpost = TransferMatrix * F * Sigma * F.t() * TransferMatrix.t();
+      float sigx = std::sqrt(Qpost(0, 0));
+      float sigy = std::sqrt(Qpost(1, 1));
 
 
-        arma::mat Qcheck = arma::round(Qpost * 1e5) * 1e-5;
-        bool isQdiag = true;
-        if (Qcheck(0, 1) != 0) {
-          isQdiag = false;
-        }
-        bool sigCheck = (std::round(sigx * 1e5) != std::round(sigy * 1e5));
-        if (!isQdiag && sigCheck) {
-          throw "Covariance Matrices are NOT scalar * identity";
-        }
-        // post of mode q
-        qpost = A * this->vertices.slice(q);
-        qpost_TF = TransferMatrix * qpost;
-
+      arma::mat Qcheck = arma::round(Qpost * 1e5) * 1e-5;
+      bool isQdiag = (Qcheck(0, 1) == 0);
+      
+      bool sigCheck = (std::round(sigx * 1e5) != std::round(sigy * 1e5));
+      if (!isQdiag && sigCheck) {
+        throw "Covariance Matrices are NOT scalar * identity";
       }
+      // post of mode q
+      qpost = A * this->vertices.slice(q);
+      qpost_TF = TransferMatrix * qpost;
 
-      arma::mat qprime_TF(qpost_TF.n_rows, qpost_TF.n_cols);
-      double pmin = 0, pmax = 0;
+    }
 
-      // Go through each cell
-      for (size_t qprime = 0; qprime < this->mode[HSmode].vertices.size();
-           ++qprime) {
-        qprime_TF = this->mode[HSmode].vertices[qprime];
+    arma::mat qprime_TF(qpost_TF.n_rows, qpost_TF.n_cols);
+    double pmin = 0, pmax = 0;
 
-        // get min and max probabilities for currrent transitions
-        double pmini = checkPmin(pminCheck, qpost_TF, qprime_TF,
-                                 this->desc.dyn.dynamics[HSmode].x_dim);
+    // Go through each cell
+    for (size_t qprime = 0; qprime < this->mode[HSmode].vertices.size();
+          ++qprime) {
+      qprime_TF = this->mode[HSmode].vertices[qprime];
+
+      // get min and max probabilities for currrent transitions
+      double pmini = checkPmin(pminCheck, qpost_TF, qprime_TF,
+                                this->desc.dyn.dynamics[HSmode].x_dim);
 
 
-        if (pmini == -2) {
-          pmin = this->getMinTranProb(qpost_TF, qprime_TF,
-                                      this->desc.dyn.dynamics[HSmode].x_dim);
-        } else {
-          if (pminCheck == -1) {
-            pminCheck = pmini;
-            pmin = pmini;
-          } else if (pmini > pminCheck) {
-            pmin = pminCheck;
-          } else {
-            pmin = pmini;
-            pminCheck = pmini;
-          }
-        }
-        double pmaxi = checkPmax(pmaxCheck, qpost_TF, qprime_TF, x_dim);
-        if (pmaxi == 2) {
-          pmax = this->getMaxTranProb(qpost_TF, qprime_TF, x_dim);
-        } else {
-          if (pmaxi < pmaxCheck) {
-            pmax = pmaxCheck;
-          } else {
-            pmax = pmaxi;
-            pmaxCheck = pmaxi;
-          }
-        }
-      /*  if (pmin < 1e-7) {
-          pmin = 0;
-        }
-        if (pmax < 1e-7) {
-          pmax = 0;
-        }*/
-
-        Smin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
-        Smax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
-        index++;
-      }
-      index = 0;
-
-      // for the out-of-boundary state pmin = 1-pmax
-      // for states out of boundary need to compute underapproximation
-      qprime_TF = this->desc.mode[0].transfermatrix * this->desc.boundary;
-
-      // Check if  qprime_TF lies outside qprime_TF
-      // find the min/max transition prob to the boundary
-      double v = 0;
-      if (arma::accu(qpost_TF.col(0) < qprime_TF.col(0)) > 0) {
-        v = 1;
-      }
-
-      if (arma::accu(qpost_TF.col(1) > qprime_TF.col(1)) > 0) {
-        v = 1;
-      }
-     if ((v == 0) || (q > this->mode[HSmode].vertices.size()-1)) {
+      if (pmini == -2) {
         pmin = this->getMinTranProb(qpost_TF, qprime_TF,
                                     this->desc.dyn.dynamics[HSmode].x_dim);
-        pmax = this->getMaxTranProb(qpost_TF, qprime_TF,
-                                    this->desc.dyn.dynamics[HSmode].x_dim);
       } else {
-        // if not rectangle, find tight bounds
-        arma::mat qprime_set_TF = this->mode[HSmode].vertices[q];
-        arma::mat qprime_set_TF_ctr = this->mode[HSmode].mode_center;
-        pmin = this->getMinTranProb2Rect(qpost_TF, qprime_set_TF,
-                                         qprime_set_TF_ctr,
-                                         this->desc.dyn.dynamics[HSmode].x_dim);
-        pmax = this->getMaxTranProb2Rect(qpost_TF, qprime_set_TF,
-                                         qprime_set_TF_ctr,
-                                         this->desc.dyn.dynamics[HSmode].x_dim);
+        if (pminCheck == -1) {
+          pminCheck = pmini;
+          pmin = pmini;
+        } else if (pmini > pminCheck) {
+          pmin = pminCheck;
+        } else {
+          pmin = pmini;
+          pminCheck = pmini;
+        }
+      }
+      double pmaxi = checkPmax(pmaxCheck, qpost_TF, qprime_TF, x_dim);
+      if (pmaxi == 2) {
+        pmax = this->getMaxTranProb(qpost_TF, qprime_TF, x_dim);
+      } else {
+        if (pmaxi < pmaxCheck) {
+          pmax = pmaxCheck;
+        } else {
+          pmax = pmaxi;
+          pmaxCheck = pmaxi;
+        }
       }
     /*  if (pmin < 1e-7) {
         pmin = 0;
@@ -1392,27 +1350,87 @@ void bmdp_t::getSteps() {
       if (pmax < 1e-7) {
         pmax = 0;
       }*/
-      Smin(currentrow, num_states - 1) = 1 - pmax;
-      Smax(currentrow, num_states - 1) = 1 - pmin;
+
+      steps_mutex.lock();
+      this->Stepsmin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
+      this->Stepsmax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
+      steps_mutex.unlock();
+
+      index++;
     }
+    index = 0;
+
+    // for the out-of-boundary state pmin = 1-pmax
+    // for states out of boundary need to compute underapproximation
+    qprime_TF = this->desc.mode[0].transfermatrix * this->desc.boundary;
+
+    // Check if  qprime_TF lies outside qprime_TF
+    // find the min/max transition prob to the boundary
+    double v = 0;
+    if (arma::accu(qpost_TF.col(0) < qprime_TF.col(0)) > 0) {
+      v = 1;
+    }
+
+    if (arma::accu(qpost_TF.col(1) > qprime_TF.col(1)) > 0) {
+      v = 1;
+    }
+    if ((v == 0) || (q > this->mode[HSmode].vertices.size()-1)) {
+      pmin = this->getMinTranProb(qpost_TF, qprime_TF,
+                                  this->desc.dyn.dynamics[HSmode].x_dim);
+      pmax = this->getMaxTranProb(qpost_TF, qprime_TF,
+                                  this->desc.dyn.dynamics[HSmode].x_dim);
+    } else {
+      // if not rectangle, find tight bounds
+      arma::mat qprime_set_TF = this->mode[HSmode].vertices[q];
+      arma::mat qprime_set_TF_ctr = this->mode[HSmode].mode_center;
+      pmin = this->getMinTranProb2Rect(qpost_TF, qprime_set_TF,
+                                        qprime_set_TF_ctr,
+                                        this->desc.dyn.dynamics[HSmode].x_dim);
+      pmax = this->getMaxTranProb2Rect(qpost_TF, qprime_set_TF,
+                                        qprime_set_TF_ctr,
+                                        this->desc.dyn.dynamics[HSmode].x_dim);
+    }
+    
+    steps_mutex.lock();
+    this->Stepsmin(currentrow, num_states - 1) = 1 - pmax;
+    this->Stepsmax(currentrow, num_states - 1) = 1 - pmin;
+    steps_mutex.unlock();
   }
+ 
+}
+
+// this function creates modes for each dynamics whose covariance matrix is
+// non-diagonal for general type
+void bmdp_t::getSteps() {
+  // initialize the matrices
+  size_t num_dyn = this->mode.size();
+  size_t num_states = this->states.n_elem + 1;
+
+  this->Stepsmin = arma::sp_mat(num_dyn * num_states, num_states);
+  this->Stepsmax = arma::sp_mat(num_dyn * num_states, num_states);
+
+  std::vector<int> tasks;
+  for (size_t q = 0; q < this->states.n_rows; ++q) 
+    tasks.push_back(q);
+  task_manager<int, void> manager(
+          new vector_bag(tasks), 
+          [&](int q) { getSteps(q); },
+          100);
+  manager.run();
 
   // self transition for the out-of-boundary state
   size_t q = num_states;
   for (size_t a = 0; a < num_dyn; ++a) {
-    currentrow = (q - 1) * num_dyn + a;
-    Smin(currentrow, num_states - 1) = 1;
-    Smax(currentrow, num_states - 1) = 1;
+    int currentrow = (q - 1) * num_dyn + a;
+    this->Stepsmin(currentrow, num_states - 1) = 1;
+    this->Stepsmax(currentrow, num_states - 1) = 1;
   }
-
-  this->Stepsmax = Smax;
-  this->Stepsmin = Smin;
 
   // ------------------------------------------------
   // sanity check
   // ------------------------------------------------
-  arma::mat stepsmin = arma::conv_to<arma::mat>::from(Smin);
-  arma::mat stepsmax = arma::conv_to<arma::mat>::from(Smax);
+  arma::mat stepsmin = arma::conv_to<arma::mat>::from(this->Stepsmin);
+  arma::mat stepsmax = arma::conv_to<arma::mat>::from(this->Stepsmax);
   arma::mat minSum = arma::sum(stepsmin.t());
   arma::mat maxSum = arma::sum(stepsmax.t());
 
@@ -1715,22 +1733,21 @@ void bmdp_t::getStepsBasedonMedian(double epsilon, int T) {
 }
 // this function creates modes for each dynamics whose covariance matrix is
 // non-diagonal for general type
-void bmdp_t::getStepsNonDiag() {
-  // initialize the matrices
-  clock_t begin, end;
-  double time;
-  begin = clock();
+
+/* 
+ * Computes the transition probabilities starting from a given grid cell.
+ *
+ * @param q the cell for which to compute the transition probabilities
+ * 
+ * @note it is threadsafe - uses steps_mutex
+ */
+void bmdp_t::getStepsNonDiag(int q) {
   size_t num_dyn = this->mode.size();
   size_t num_states = this->states.n_elem + 1;
-  size_t currentrow = 0;
-  size_t index = 0;
-  arma::sp_mat Smin(num_dyn * num_states, num_states);
-  arma::sp_mat Smax(num_dyn * num_states, num_states);
   size_t ogg_index = 0;
-  for (size_t q = 0; q < num_states - 1; ++q) {
-    for (size_t a = 0; a < num_dyn; ++a) {
 
-      currentrow = (q)*num_dyn + a;
+  for (size_t a = 0; a < num_dyn; ++a) {
+      int currentrow = (q)*num_dyn + a;
       size_t HSmode = a;
 
       arma::mat A = this->desc.dyn.dynamics[a].A;
@@ -1743,10 +1760,8 @@ void bmdp_t::getStepsNonDiag() {
       float sigy = std::sqrt(Qpost(1, 1));
 
       arma::mat Qcheck = arma::round(Qpost * 1e5) * 1e-5;
-      bool isQdiag = true;
-      if (Qcheck(0, 1) != 0) {
-        isQdiag = false;
-      }
+      bool isQdiag = (Qcheck(0, 1) == 0);
+
       bool sigCheck = (std::round(sigx * 1e5) != std::round(sigy * 1e5));
       if (!isQdiag && sigCheck) {
         throw "Covariance Matrices are NOT scalar * identity";
@@ -1758,6 +1773,7 @@ void bmdp_t::getStepsNonDiag() {
       arma::mat qprime_TF(qpost_TF.n_rows, qpost_TF.n_cols);
       double pmin = 0, pmax = 0;
 
+      int index = 0;
       for (size_t qprime = 0; qprime < this->mode[HSmode].states.n_elem - 1;
            ++qprime) {
 
@@ -1768,12 +1784,14 @@ void bmdp_t::getStepsNonDiag() {
             qpost_TF, qprime_TF, this->desc.dyn.dynamics[HSmode].x_dim);
         pmax = this->getMaxTranProbNonDiag(
             qpost_TF, qprime_TF, this->desc.dyn.dynamics[HSmode].x_dim);
-        Smin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
-        Smax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
+
+        steps_mutex.lock();
+        this -> Stepsmin(currentrow, this->mode[HSmode].states(index, 0)) = pmin;
+        this -> Stepsmax(currentrow, this->mode[HSmode].states(index, 0)) = pmax;
+        steps_mutex.unlock();
 
         index++;
       }
-      index = 0;
       // for the out-of-boundary state pmin = 1-pmax
       qprime_TF = TransferMatrix * this->desc.boundary;
 
@@ -1812,28 +1830,49 @@ void bmdp_t::getStepsNonDiag() {
                                          this->desc.dyn.dynamics[HSmode].x_dim);
       }
 
-      Smin(currentrow, num_states - 1) = 1 - pmax;
-      Smax(currentrow, num_states - 1) = 1 - pmin;
+      steps_mutex.lock();
+      this -> Stepsmin(currentrow, num_states - 1) = 1 - pmax;
+      this -> Stepsmax(currentrow, num_states - 1) = 1 - pmin;
+      steps_mutex.unlock();
     }
-  }
+}
+
+void bmdp_t::getStepsNonDiag() {
+  // initialize the matrices
+  clock_t begin, end;
+  double time;
+  begin = clock();
+  size_t num_dyn = this->mode.size();
+  size_t num_states = this->states.n_elem + 1;
+  
+  this -> Stepsmin = arma::sp_mat(num_dyn * num_states, num_states);
+  this -> Stepsmax = arma::sp_mat(num_dyn * num_states, num_states);
+
+  std::vector<int> tasks;
+  for (size_t q = 0; q < num_states - 1; ++q) 
+    tasks.push_back(q);
+
+  task_manager<int, void> manager(
+          new vector_bag(tasks), 
+          [&](int q) { getSteps(q); },
+          100);
+  manager.run();
+
   // self transition for the out-of-boundary state
   size_t q = num_states;
   for (size_t a = 0; a < num_dyn; ++a) {
-    currentrow = (q - 1) * num_dyn + a;
-    Smin(currentrow, num_states - 1) = 1;
-    Smax(currentrow, num_states - 1) = 1;
+    int currentrow = (q - 1) * num_dyn + a;
+    Stepsmin(currentrow, num_states - 1) = 1;
+    Stepsmax(currentrow, num_states - 1) = 1;
   }
-
-  this->Stepsmin = Smin;
-  this->Stepsmax = Smax;
 
   end = clock();
   time = (double)(end - begin) / CLOCKS_PER_SEC;
   // ------------------------------------------------
   // sanity check
   // ------------------------------------------------
-  arma::mat stepsmin = arma::conv_to<arma::mat>::from(Smin);
-  arma::mat stepsmax = arma::conv_to<arma::mat>::from(Smax);
+  arma::mat stepsmin = arma::conv_to<arma::mat>::from(this -> Stepsmin);
+  arma::mat stepsmax = arma::conv_to<arma::mat>::from(this -> Stepsmax);
 
   arma::mat minSum = arma::sum(stepsmin.t());
   arma::mat maxSum = arma::sum(stepsmax.t());

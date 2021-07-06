@@ -63,11 +63,13 @@ public:
   double actNum;
   double eps; // min allowable abstraction error for adaptive-refinement
   Sys desc;   // Structure of internal dynamics
+  std::mutex steps_mutex; // mutex used for writing in Stepsmin and Stepsmax
   bmdp_t();   // initialising the bmdp
   bmdp_t(taskSpec_t &myTask);
   bmdp_t(taskSpec_t &myTask, shs_t<arma::mat, int> &inModel);
   void bmdpAbstraction(int T, int RA); // Generate the abstraction
   void getHybSysModes();               // Grid domain
+  void getSteps(int q); // computes the probabilitis starting from state q
   void getSteps(); // compute lower and upper probabtilities (uniform)
   void
   getSteps(double epsilon); // compute lower and upper probabilitoes (adaptive)
@@ -110,6 +112,7 @@ public:
                                size_t dim);
   double getMaxTranProbNonDiag(arma::mat qpost_TF, arma::mat qprime_TF,
                                size_t dim);
+  void getStepsNonDiag(int q); // Computes the steps from state q
   void getStepsNonDiag();
   arma::uvec getLabels(std::string phiFile, int x_dim, bool under_approx);
   std::vector<std::vector<arma::mat>> getLabelVertices(std::string phiFile,

@@ -1854,7 +1854,7 @@ void bmdp_t::getStepsNonDiag() {
 
   task_manager<int, void> manager(
           new vector_bag(tasks), 
-          [&](int q) { getSteps(q); },
+          [&](int q) { getStepsNonDiag(q); },
           100);
   manager.run();
 

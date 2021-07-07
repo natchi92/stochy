@@ -96,9 +96,8 @@ bool task_manager_base<T, R>::get_task(T& task){
 
     int fill = (1.0 - (double) m_bag -> no_tasks() / initial_no_tasks) * progress_bar_size;
     if(progress_bar_size > 0 && progress_bar_fill < fill ) {
-        progress_bar_fill = fill;
         int i = 0;
-        for(; i < progress_bar_size + 2; i ++)
+        for(; i < progress_bar_size + 2 && progress_bar_fill >= 0; i ++)
             std::cout << '\b';
         std::cout << '[';
         for( i = 0; i < fill; i ++)
@@ -108,6 +107,7 @@ bool task_manager_base<T, R>::get_task(T& task){
         std::cout<<"]";
         if(m_bag -> empty())
             std::cout<<'\n';
+        progress_bar_fill = fill;
     }
 
     task = m_bag -> next();

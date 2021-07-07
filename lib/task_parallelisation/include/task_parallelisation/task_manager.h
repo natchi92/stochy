@@ -94,6 +94,9 @@ bool task_manager_base<T, R>::get_task(T& task){
         return false;
     }
 
+    for(int i=0; i < 9 && progress_bar_fill >= 0; i ++)
+        std::cout << '\b';
+
     int fill = (1.0 - (double) m_bag -> no_tasks() / initial_no_tasks) * progress_bar_size;
     if(progress_bar_size > 0 && progress_bar_fill < fill ) {
         int i = 0;
@@ -109,7 +112,8 @@ bool task_manager_base<T, R>::get_task(T& task){
             std::cout<<'\n';
         progress_bar_fill = fill;
     }
-
+    std::cout<<std::fixed<<std::setprecision(5)<<(1.0 - (double) m_bag -> no_tasks() / initial_no_tasks)<<'\n';
+    
     task = m_bag -> next();
     get_task_mutex.unlock();
     return true;

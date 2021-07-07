@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
     shs_t<arma::mat, int> cs1SHS(models1);
 
     // Define max error
-    arma::mat grid = {{0.08, 0.08, 1, 1}};
+    arma::mat grid = {{0.4, 0.4, 0.9, 0.9}};
     arma::mat reft = {{1, 1, 1, 1}};
     // Define safe set
     arma::mat Safe = {{18.5 - x1_ss, 20.5 - x1_ss},
@@ -136,13 +136,13 @@ int main(int argc, char **argv) {
     arma::mat Gq0 = arma::diagmat(Bq0);
 
     ssmodels_t model(Aq0, Gq0);
-    std::cout << "Gq0" << Gq0 << std::endl;
+
 
     std::vector<ssmodels_t> models1 = {model};
     shs_t<arma::mat, int> cs1SHS(models1);
 
     // Define max error
-    arma::mat grid = {{0.2, 0.2, 0.5, 0.5, 0.5, 0.5, 0.5}};
+    arma::mat grid = {{0.6, 0.6, 1, 1, 1, 1, 1}};
     arma::mat reft = {{1, 1, 1, 1, 1, 1, 1}};
 
     // Define safe set

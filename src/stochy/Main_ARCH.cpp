@@ -197,8 +197,7 @@ int main(int argc, char **argv) {
                      {0.0009, 1e-4, 0.9989}};
     arma::mat Gq0 = {{5, 0, 0}, {0, 5, 0}, {0, 0, 5}};
     arma::vec Qq0 = {{0.0842}, {0.0009}, {1e-5}};
-    Gq0 = Gq0 + arma::diagmat(Qq0.t() * 7 * 10);
-    ssmodels_t model(Aq0, Gq0);
+    ssmodels_t model(Aq0,Qq0, Gq0);
 
     std::vector<ssmodels_t> models1 = {model};
     shs_t<arma::mat, int> cs1SHS(models1);
@@ -206,7 +205,7 @@ int main(int argc, char **argv) {
     // Define safe set
     arma::mat bound = {{1, 6}, {0, 10}, {0, 10}};
 
-    arma::mat grid = {{0.5, 0.5, 1}};
+    arma::mat grid = {{0.8, 0.8, 5}};
     arma::mat reft = {{.5, .5, .5}};
     // Define grid type
     // (1 = uniform, 2 = adaptive)

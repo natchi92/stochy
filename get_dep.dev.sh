@@ -6,7 +6,7 @@ fi
 
 sudo apt-get -y install cmake
 sudo apt-get -y install libboost-all-dev
-sudo apt-get -y install libopenblas-dev, 
+sudo apt-get -y install libopenblas-dev
 sudo apt-get -y install liblapack-dev
 
 #TODO: add the following as submodules

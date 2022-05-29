@@ -97,10 +97,10 @@ int case_study_arch(int argc, char **argv) {
         int p = 1;
 
         // Task specification
-        taskSpec_t cs1SpecFAUST(3, K, 1, Safe, grid, reft);
+        TaskSpec cs1SpecFAUST(3, K, 1, Safe, grid, reft);
 
         // Combine model and associated task
-        inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+        InputSpec<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
 
         // Perform  Task
         performTask(cs1InputFAUST);
@@ -181,10 +181,10 @@ int case_study_arch(int argc, char **argv) {
         int p = 1;
 
         // Task specification
-        taskSpec_t cs1SpecFAUST(3, K, 1, Safe, grid, reft);
+        TaskSpec cs1SpecFAUST(3, K, 1, Safe, grid, reft);
 
         // Combine model and associated task
-        inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+        InputSpec<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
 
         // Perform  Task
         performTask(cs1InputFAUST);
@@ -240,10 +240,10 @@ int case_study_arch(int argc, char **argv) {
       int p = verify_safety;
 
       // Task specification
-      taskSpec_t cs1SpecFAUST(lb, K, p, bound, grid, reft);
+      TaskSpec cs1SpecFAUST(lb, K, p, bound, grid, reft);
 
       // Combine model and associated task
-      inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+      InputSpec<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
 
           // Perform  Task
       performTask(cs1InputFAUST);
@@ -385,10 +385,10 @@ int case_study_arch(int argc, char **argv) {
     int p = 1;
 
     // Task specification
-    taskSpec_t cs1SpecFAUST(3, K, 1, bound, grid, reft);
+    TaskSpec cs1SpecFAUST(3, K, 1, bound, grid, reft);
 
     // Combine model and associated task
-    inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+    InputSpec<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
 
         // Perform  Task
     performTask(cs1InputFAUST);

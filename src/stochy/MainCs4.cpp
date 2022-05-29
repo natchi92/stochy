@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
   // Read from .txt/.mat file or define here as defined x_init
   arma::mat U = readInputSignal("u.txt");
   exdata_t data(X, U, q_init);
+  ExData data(X, U, q_init);
 
   // Get model from file
   shs_t<arma::mat, int> cs4SHS("CS4.mat", data);

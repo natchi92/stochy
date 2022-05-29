@@ -1,4 +1,4 @@
-/*n
+/*
  * utility.h
  *
  *  Created on: 11 Jan 2018
@@ -40,23 +40,23 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-enum Library {simulator =1 , mdp=2, imdp=3};
-enum grid {uniform =1 , adaptive=2};
-enum property {verify_safety=1, verify_reach_avoid=2,synthesis_safety=3, synthesis_reach_avoid=4};
 
 // function to check whether a folder exists
 // according to given path
-static int checkFolderExists(const char *path) {
+static int checkFolderExists(const char *path)
+{
   struct stat info;
 
-  if (stat(path, &info) != 0) {
-    return -1;
-  } else if (info.st_mode & S_IFDIR) {
-    return 0;
-  } else {
+  if (stat(path, &info) != 0)
+  {
     return -1;
   }
+  else if (info.st_mode & S_IFDIR)
+  {
+    return 0;
+  }
 
+  return -1;
 }
 
 // find Location of characters in string
@@ -276,11 +276,11 @@ static int binarySearch(int arr[], int l, int r, int x) {
 }
 
 // union of arr1[0..m-1] and arr2[0..n-1]
-static std::vector<int> Union(int arr1[], int arr2[], int m, int n) 
+static std::vector<int> Union(int arr1[], int arr2[], int m, int n)
 {
   // Before finding union, make sure arr1[0..m-1]
   // is smaller
-  if (m > n) 
+  if (m > n)
   {
     int *tempp = arr1;
     arr1 = arr2;
@@ -302,9 +302,9 @@ static std::vector<int> Union(int arr1[], int arr2[], int m, int n)
   // and print the element if not found
   std::vector<int> res;
   int count = 0;
-  for (int i = 0; i < n; i++) 
+  for (int i = 0; i < n; i++)
   {
-    if (binarySearch(arr1, 0, m - 1, arr2[i]) == -1) 
+    if (binarySearch(arr1, 0, m - 1, arr2[i]) == -1)
     {
       res.push_back(arr2[i]);
       count++;
@@ -318,32 +318,32 @@ static std::vector<int> Union(int arr1[], int arr2[], int m, int n)
 // [ a 0 0;
 //   0 b 0;
 //   0 0 c];
-static void checkDiagonal(arma::mat mat) 
+static void checkDiagonal(arma::mat mat)
 {
-  try 
+  try
   {
     unsigned sizeC_mat = mat.n_cols;
     unsigned sizeR_mat = mat.n_rows;
-    if (sizeC_mat != sizeR_mat) 
+    if (sizeC_mat != sizeR_mat)
     {
       throw " Matrix is not square, thus not diagonal!";
-    } 
-    else 
+    }
+    else
     {
-      for (unsigned i = 0; i < sizeR_mat; ++i) 
+      for (unsigned i = 0; i < sizeR_mat; ++i)
       {
-        for (unsigned j = 0; j < sizeC_mat; ++j) 
+        for (unsigned j = 0; j < sizeC_mat; ++j)
 	{
           if (i == j)
 	  {
-            if (mat(i, j) == 0) 
+            if (mat(i, j) == 0)
 	    {
               throw "Matrix is not diagonal! ";
             }
-          } 
+          }
 	  else
 	  {
-            if (mat(i, j) != 0) 
+            if (mat(i, j) != 0)
 	    {
               throw "Matrix is not diagonal! ";
             }
@@ -351,8 +351,8 @@ static void checkDiagonal(arma::mat mat)
         }
       }
     }
-  } 
-  catch (const char *msg) 
+  }
+  catch (const char *msg)
   {
     std::cerr << msg << std::endl;
     exit(0);
@@ -360,30 +360,30 @@ static void checkDiagonal(arma::mat mat)
 }
 
 // Check if matrix is diagonal
-static bool isDiagonal(arma::mat mat) 
+static bool isDiagonal(arma::mat mat)
 {
   unsigned sizeC_mat = mat.n_cols;
   unsigned sizeR_mat = mat.n_rows;
-  if (sizeC_mat != sizeR_mat) 
+  if (sizeC_mat != sizeR_mat)
   {
     return 0;
-  } 
-  else 
+  }
+  else
   {
-    for (unsigned i = 0; i < sizeR_mat; ++i) 
+    for (unsigned i = 0; i < sizeR_mat; ++i)
     {
-      for (unsigned j = 0; j < sizeC_mat; ++j) 
+      for (unsigned j = 0; j < sizeC_mat; ++j)
       {
-        if (i == j) 
+        if (i == j)
 	{
-          if (mat(i, j) == 0) 
+          if (mat(i, j) == 0)
 	  {
             return 0;
           }
         }
        	else
        	{
-          if (mat(i, j) != 0) 
+          if (mat(i, j) != 0)
 	  {
             return 0;
           }
@@ -394,7 +394,7 @@ static bool isDiagonal(arma::mat mat)
   return 1;
 }
 
-static std::vector<std::string> getAllCombinations(int N) 
+static std::vector<std::string> getAllCombinations(int N)
 {
   // string to store N-digit binary number
   std::string str;
@@ -402,40 +402,40 @@ static std::vector<std::string> getAllCombinations(int N)
 
   // construct N-digit binary number filled with all 0's
   int j = N;
-  while (j--) 
+  while (j--)
   {
     str.push_back('0');
   }
   // get first set of all k-bit all zeros
   std::string temp = "0";
   j = N - 1;
-  while (j--) 
+  while (j--)
   {
     temp += "0";
   }
 
   res.push_back(temp);
-  
+
   // store all numbers with k-bit set together in ascending order
-  for (int k = 1; k <= N; k++) 
+  for (int k = 1; k <= N; k++)
   {
     // set last k bits to '1'
     str[N - k] = '1';
     std::string curr = str;
 
-    do 
+    do
     {
       res.push_back(str);
       // std::cout << str << std::endl;
-    } 
+    }
     while (next_permutation(str.begin(), str.end()));
   }
   return res;
 }
 
-static size_t skipControls(const char *pData, size_t pos, size_t length) 
+static size_t skipControls(const char *pData, size_t pos, size_t length)
 {
-  while (pos < length) 
+  while (pos < length)
   {
     if ((pData[pos] != 32) && (pData[pos] != 8) && (pData[pos] != '\n'))
       return pos;
@@ -445,43 +445,43 @@ static size_t skipControls(const char *pData, size_t pos, size_t length)
 }
 
 // Function to recursively compute all the possible
-// grid cells given a set of vertices describing
+// Grid cells given a set of vertices describing
 // their upper and lower bound  values
 static void rec(std::vector<arma::mat> &intervals, arma::mat cells,
                 arma::mat temp, unsigned index, unsigned what, unsigned n_rows,
                 unsigned cols) {
 
-  for (unsigned r = 0; r < what; r = r + 2) 
+  for (unsigned r = 0; r < what; r = r + 2)
   {
     arma::mat tempr = cells(index, arma::span(r, r + 1));
 
-    if (n_rows < 3) 
+    if (n_rows < 3)
     {
       tempr = join_vert(temp, tempr);
-    } 
-    else 
+    }
+    else
     {
       tempr = temp;
 
       tempr.row(cols) = cells(cols, arma::span(r, r + 1));
       cols++;
-      if (cols > n_rows - 1) 
+      if (cols > n_rows - 1)
       {
         cols = 0;
       }
       intervals.push_back(tempr);
     }
 
-    if ((n_rows - 1) == index) 
+    if ((n_rows - 1) == index)
     {
-      if (n_rows < 3) 
+      if (n_rows < 3)
       {
         intervals.push_back(tempr);
       }
-    } 
-    else 
+    }
+    else
     {
-      if (n_rows > 2) 
+      if (n_rows > 2)
       {
         rec(intervals, cells,
             cells(arma::span(0, n_rows - 1), arma::span(r, r + 1)), index + 1,

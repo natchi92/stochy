@@ -38,10 +38,10 @@ int case_study2()
   shs_t<arma::mat, int> cs2SHS(x_dim, models);
 
   // Specify task to be performed
-  taskSpec_t cs2Spec(3, T, 3, boundary, grid, rtol);
+  TaskSpec cs2Spec(3, T, 3, boundary, grid, rtol);
 
   // Comspecfication and associated task
-  inputSpec_t<arma::mat, int> cs2Input(cs2SHS, cs2Spec);
+  InputSpec<arma::mat, int> cs2Input(cs2SHS, cs2Spec);
 
   // Perform Task
   performTask(cs2Input);

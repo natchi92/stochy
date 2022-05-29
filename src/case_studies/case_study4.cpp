@@ -41,10 +41,10 @@ int case_study4(
   shs_t<arma::mat, int> cs4SHS(model_path.c_str(), data);
 
   // Specify task to be performed
-  taskSpec_t cs4Spec(1, T1, monte);
+  TaskSpec cs4Spec(1, T1, monte);
 
   // Combine model and associated task
-  inputSpec_t<arma::mat, int> cs4Input(cs4SHS, cs4Spec);
+  InputSpec<arma::mat, int> cs4Input(cs4SHS, cs4Spec);
 
   // Perform Task
   performTask(cs4Input);

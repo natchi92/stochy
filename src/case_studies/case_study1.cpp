@@ -1,6 +1,3 @@
-///
-///
-
 #include "case_studies.h"
 
 #include <taskExec.h>
@@ -14,7 +11,7 @@ int case_study1(const std::string &model_path)
   // Specify verification task
   std::vector<int> grid_size;
   int num = -1;
-  do 
+  do
   {
     std::cout << "Please input grid sizes of interest [value, value, ..], "
                  "enter -1 to generate results for all grids in Table 1 of "
@@ -25,7 +22,7 @@ int case_study1(const std::string &model_path)
     }
   } while (num > 0);
 
-  if (grid_size.empty()) 
+  if (grid_size.empty())
   {
     std::cout << "No dimension provided." << std::endl;
     exit(0);
@@ -109,10 +106,10 @@ int case_study1(const std::string &model_path)
     // Time horizon
     int K = 3;
     faust_t inputFAUST;
-    taskSpec_t cs1SpecFAUST(2, K, 1, Safe, eps, gridType);
+    TaskSpec cs1SpecFAUST(2, K, 1, Safe, eps, gridType);
 
     // Combine model and associated task
-    inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+    InputSpec<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
 
     // Perform  Task
     performTask(cs1InputFAUST);
@@ -132,11 +129,11 @@ int case_study1(const std::string &model_path)
     arma::mat rtol1 = {{1, 1}};
 
     // Specify task to be performed
-    taskSpec_t cs1Spec(3, K, 1, bound, grid1, rtol1);
+    TaskSpec cs1Spec(3, K, 1, bound, grid1, rtol1);
 
     // Combine model and associated task
     cs1SHS.x_mod[0].F = arma::eye(2, 2);
-    inputSpec_t<arma::mat, int> cs1Input(cs1SHS, cs1Spec);
+    InputSpec<arma::mat, int> cs1Input(cs1SHS, cs1Spec);
 
     // Perform Task
     performTask(cs1Input);

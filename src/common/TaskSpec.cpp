@@ -8,13 +8,14 @@
 
 #include "TaskSpec.h"
 
-taskSpec_t::taskSpec_t() {
+TaskSpec::TaskSpec()
+{
   // Initialise task to be performed
   // By default set  to simulation
   task = 1;
   T = 1; // default time horizon: 1 step
   runs = 10000; // default number of monte carlo simulations
-  propertySpec = 1; // default property spec: simulation
+  PropertySpec = 1; // default Property spec: simulation
   safeSet = arma::zeros<arma::mat>(1, 1);
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
@@ -23,15 +24,15 @@ taskSpec_t::taskSpec_t() {
   assumptionsKernel = 1;
   Controlled = 0;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N) {
+TaskSpec::TaskSpec(int inputTask, int N) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = 1;
+  PropertySpec = 1;
   safeSet = arma::zeros<arma::mat>(1, 1);
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
@@ -40,14 +41,14 @@ taskSpec_t::taskSpec_t(int inputTask, int N) {
   assumptionsKernel = 1;
   Controlled = 0;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
-taskSpec_t::taskSpec_t(int inputTask, int N, int monte) {
+TaskSpec::TaskSpec(int inputTask, int N, int monte) {
   task = inputTask;
   T = N;
   runs = monte;
-  propertySpec = 1;
+  PropertySpec = 1;
   safeSet = arma::zeros<arma::mat>(1, 1);
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
@@ -56,40 +57,40 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int monte) {
   assumptionsKernel = 1;
   Controlled = 0;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat safety,
                        arma::mat target, arma::mat input, double error,
-                       int gridType) {
+                       int GridType) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
+  PropertySpec = Property;
   safeSet = safety;
   targetSet = target;
   inputSet = input;
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = 1;
   Controlled = 1;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat set,
-                       arma::mat input, double error, int gridType,
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat set,
+                       arma::mat input, double error, int GridType,
                        int control) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
-  if ((property == 1) & (control == 1)) {
+  PropertySpec = Property;
+  if ((Property == 1) & (control == 1)) {
     safeSet = set;
     inputSet = input;
     targetSet = arma::zeros<arma::mat>(1, 1);
-  } else if ((property == 2) & (control == 0)) {
+  } else if ((Property == 2) & (control == 0)) {
     safeSet = set;
     targetSet = input;
     inputSet = arma::zeros<arma::mat>(1, 1);
@@ -99,70 +100,70 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat set,
   }
   inputSet = input;
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = 1;
   Controlled = control;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
-                       double error, int gridType) {
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat safety,
+                       double error, int GridType) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
+  PropertySpec = Property;
   safeSet = safety;
-  if (property != 1) {
+  if (Property != 1) {
     std::cout << "Incorrect definition of sets or specification" << std::endl;
     exit(0);
   }
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = 1;
   Controlled = 0;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
-                       double error, int gridType, int Kernel) {
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat safety,
+                       double error, int GridType, int Kernel) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
+  PropertySpec = Property;
   safeSet = safety;
-  if (property != 1) {
+  if (Property != 1) {
     std::cout << "Incorrect definition of sets or specification" << std::endl;
     exit(0);
   }
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = Kernel;
   Controlled = 0;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat set,
-                       arma::mat input, double error, int gridType, int Kernel,
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat set,
+                       arma::mat input, double error, int GridType, int Kernel,
                        int control) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
-  if ((property == 1) & (control == 1)) {
+  PropertySpec = Property;
+  if ((Property == 1) & (control == 1)) {
     safeSet = set;
     inputSet = input;
     targetSet = arma::zeros<arma::mat>(1, 1);
 
-  } else if ((property == 2) & (control == 0)) {
+  } else if ((Property == 2) & (control == 0)) {
     safeSet = set;
     targetSet = input;
     inputSet = arma::zeros<arma::mat>(1, 1);
@@ -171,29 +172,29 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat set,
     exit(0);
   }
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = Kernel;
   Controlled = control;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat safety,
                        arma::mat target, arma::mat input, double error,
-                       int gridType, int Kernel, int control) {
+                       int GridType, int Kernel, int control) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
-  if ((property == 1) & (control == 1)) {
+  PropertySpec = Property;
+  if ((Property == 1) & (control == 1)) {
     safeSet = safety;
     inputSet = input;
     targetSet = arma::zeros<arma::mat>(1, 1);
-  } else if ((property == 2) & (control == 0)) {
+  } else if ((Property == 2) & (control == 0)) {
     safeSet = safety;
     targetSet = target;
     inputSet = arma::zeros<arma::mat>(1, 1);
-  } else if ((property == 2) & (control == 1)) {
+  } else if ((Property == 2) & (control == 1)) {
     safeSet = safety;
     targetSet = target;
     inputSet = input;
@@ -204,30 +205,30 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
   }
   inputSet = input;
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = Kernel;
   Controlled = control;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat safety,
                        arma::mat target, arma::mat input, double error,
-                       int gridType, int control) {
+                       int GridType, int control) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
-  if ((property == 1) & (control == 1)) {
+  PropertySpec = Property;
+  if ((Property == 1) & (control == 1)) {
     safeSet = safety;
     inputSet = input;
     targetSet = arma::zeros<arma::mat>(1, 1);
-  } else if ((property == 2) & (control == 0)) {
+  } else if ((Property == 2) & (control == 0)) {
     safeSet = safety;
     targetSet = target;
     inputSet = arma::zeros<arma::mat>(1, 1);
-  } else if ((property == 2) & (control == 1)) {
+  } else if ((Property == 2) & (control == 1)) {
     safeSet = safety;
     targetSet = target;
     inputSet = input;
@@ -237,20 +238,20 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat safety,
     exit(0);
   }
   eps = error;
-  typeGrid = gridType;
+  typeGrid = GridType;
   assumptionsKernel = 1;
   Controlled = control;
   boundary = arma::zeros<arma::mat>(1, 1);
-  gridsize = arma::zeros<arma::mat>(1, 1);
+  Gridsize = arma::zeros<arma::mat>(1, 1);
   reftol = arma::zeros<arma::mat>(1, 1);
 }
 
-taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat bound,
-                       arma::mat grid, arma::mat ref) {
+TaskSpec::TaskSpec(int inputTask, int N, int Property, arma::mat bound,
+                       arma::mat Grid, arma::mat ref) {
   task = inputTask;
   T = N;
   runs = 10000;
-  propertySpec = property;
+  PropertySpec = Property;
   safeSet = arma::zeros<arma::mat>(1, 1);
   targetSet = arma::zeros<arma::mat>(1, 1);
   inputSet = arma::zeros<arma::mat>(1, 1);
@@ -259,8 +260,8 @@ taskSpec_t::taskSpec_t(int inputTask, int N, int property, arma::mat bound,
   assumptionsKernel = 0;
   Controlled = 0;
   boundary = bound;
-  gridsize = grid;
+  Gridsize = Grid;
   reftol = ref;
 }
 
-taskSpec_t::~taskSpec_t() {}
+TaskSpec::~TaskSpec() {}

@@ -71,7 +71,7 @@ int case_study3()
 
     // Select task to perform
     // 1 = verification, 2 = synthe:sis for propertySpec
-    taskSpec_t cs3Spec(3, T, 1, bound, grid, reft);
+    TaskSpec cs3Spec(3, T, 1, bound, grid, reft);
 
     // set appropriate dynamics
     arma::mat Am3 = 0.8 * arma::eye(crnt_dim, crnt_dim);
@@ -82,7 +82,7 @@ int case_study3()
     std::vector<ssmodels_t> models4 = {model03};
     shs_t<arma::mat, int> cs3SHS(crnt_dim, models4);
 
-    inputSpec_t<arma::mat, int> cs3Input(cs3SHS, cs3Spec);
+    InputSpec<arma::mat, int> cs3Input(cs3SHS, cs3Spec);
 
     performTask(cs3Input);
     std::cout

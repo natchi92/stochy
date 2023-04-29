@@ -164,7 +164,7 @@ void MDP::IntervalValueIteration::computePolicy(BMDP::Policy& policy, bool maxPo
     maxVals.resize(bmdp_.getNumStates(), 0.0);
     minVals.resize(bmdp_.getNumStates(), 0.0);
 
-    for (unsigned int i = 0; i < bmdp_.getNumStates(); i++)
+    for (int i = 0; i < bmdp_.getNumStates(); i++)
     {
         if (bmdp_.getActionsAtState(i).size() == 0)
             minVals[i] = maxVals[i] = bmdp_.getCost(i);
@@ -172,7 +172,7 @@ void MDP::IntervalValueIteration::computePolicy(BMDP::Policy& policy, bool maxPo
 
     // u1 and u2 are variables that indicate the largest difference in values for a bellman update
     double u = std::numeric_limits<double>::infinity();
-    unsigned int iterations = 0;
+    int iterations = 0;
 
     MDPTransitions transitions;
 

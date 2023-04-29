@@ -19,7 +19,7 @@ wget https://sourceforge.net/projects/arma/files/armadillo-10.4.1.tar.xz
 tar -xvf armadillo-10.4.1.tar.xz --strip-components 1
 rm armadillo-10.4.1.tar.xz
 ./configure
-make
+nice make -j 20
 sudo make install
 echo "--------------------------------"
 cd ../

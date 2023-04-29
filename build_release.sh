@@ -1,5 +1,5 @@
 rm -rf build
-cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
+cmake -Wno-deprecated -Wimplicit-function-declaration -H. -Bbuild -DCMAKE_BUILD_TYPE=Release 
 cd build
-make 
+nice make -j20
 cd ../

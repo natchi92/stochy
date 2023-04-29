@@ -8,6 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # generate compile_commands.json, useful for language servers
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
+# nlopt compatibility 
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
 # group output targets by type (executables and libraries)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

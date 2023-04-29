@@ -18,6 +18,7 @@ The tools allows to described discrete time shs by parsing well known state spac
   (2)  Obtain required dependencies by running get_dep.dev.sh 
   (3)  Use build_debug.sh to run StocHy in development mode
   
+
 # Release version
   (1)  Obtain required dependencies by running get_dep.dist.sh 
   (2)  Use build_release.sh to run StocHy 
@@ -31,6 +32,7 @@ All the built and compiled binary files are then found within /build/bin. One ca
 
 To facilitate sharing of StocHy between different operating environments we provide a docker container containing StocHy. Details are found within the Docker folder.
 
+NOTE: this is currently no longer maintained
 # Wiki
 
 We maintain a wiki with all the installation details and running examples on how to use StocHy. This can be found at: [Welcome](https://gitlab.com/natchi92/StocHy/wikis/home)

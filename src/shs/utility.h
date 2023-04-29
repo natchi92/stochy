@@ -499,21 +499,27 @@ static void rec(std::vector<arma::mat> &intervals, arma::mat cells,
 
 // Give a polygon (which may be open), close it such  that
 // it is a closed polygon
-static arma::mat close_loops(arma::mat xv, arma::mat yv) {
+static arma::mat close_loops(arma::mat xv, arma::mat yv) 
+{
   bool xnan = xv.has_nan();
   bool ynan = yv.has_nan();
 
-  if (!(xnan || ynan)) {
+  if (!(xnan || ynan)) 
+  {
     // Simply connected polygon
     // Need a min of 3 points to define a polygon
     int nump = xv.n_elem;
-    if (nump < 3) {
-      return arma::zeros(2, 0);
-    } else {
+    if (nump < 3) 
+    {
+      return arma::zeros(2, 0l);
+    } 
+    else 
+    {
       // If the polygon is open, then close it.
       bool xvc = (xv(0, 0) != xv(0, nump - 1));
       bool yvc = (yv(0, 0) != yv(0, nump - 1));
-      if (xvc || yvc) {
+      if (xvc || yvc) 
+      {
         int endx = xv.n_cols;
         int endy = yv.n_cols;
         arma::mat a = arma::resize(xv, xv.n_rows, endx + 1);
@@ -524,8 +530,8 @@ static arma::mat close_loops(arma::mat xv, arma::mat yv) {
         return xyv;
       }
     }
-    return arma::zeros(2, 0);
   }
+  return arma::zeros(2, 0);
 }
 
 // Determine whether given set of vertices can be found within a polygon

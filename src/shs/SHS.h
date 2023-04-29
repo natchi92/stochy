@@ -2029,7 +2029,8 @@ public:
     }
 
   }
-  bool obtainTqfromMat(const char *fn, SHS &init) {
+  bool obtainTqfromMat(const char *fn, SHS &init) 
+  {
     // Reading model file input in .Mat format
     // and storing into ssmodel class
     mat_t *matf;
@@ -2051,10 +2052,9 @@ public:
       }
       Mat_Close(matf);
 
-    } else // unsuccessfull in opening file
-    {
-      return 1;
-    }
+    } 
+
+    return matf ? 0 : 1;
   }
 
 private:

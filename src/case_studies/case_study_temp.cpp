@@ -15,8 +15,8 @@ enum BenchMark
   INTEGRATOR=3,
 };
 
-int case_study_arch(int argc, char **argv) {
-
+int case_study_arch(int argc, char **argv) 
+{
     std::cout << " _______  _______  _______  _______  __   __  __   __ "
               << std::endl;
     std::cout << "|       ||       ||       ||       ||  | |  ||  | |  |"
@@ -35,7 +35,8 @@ int case_study_arch(int argc, char **argv) {
     std::cout << " Welcome!  Copyright (C) 2018  natchi92 " << std::endl;
     std::cout << std::endl;
 
-    if (argc < 2) {
+    if (argc < 2) 
+    {
       std::cout
           << "No case study selection was given, please make use of ./stochy i, "
              "where i=[0,1,2,3] is the required case study number"
@@ -44,8 +45,10 @@ int case_study_arch(int argc, char **argv) {
     }
     int selection = strtol(argv[1], NULL, 0);
 
-    switch (selection) {
-      case BAS_4D: {
+    switch (selection) 
+    {
+      case BAS_4D: 
+      {
         // ------------------------- Case study 1 - Verification
         // -----------------------------------
         std::cout << "------------ Performing BAS model  :  CS1BASssa"
@@ -112,10 +115,11 @@ int case_study_arch(int argc, char **argv) {
                   << std::endl;
 
 
-      break;
+        break;
       }
 
-      case BAS_7D: {
+      case BAS_7D: 
+      {
         // ------------------------- Case study 1 - Verification
         // -----------------------------------
         std::cout << "------------ Performing BAS model  :  CS1BASssa"
@@ -126,19 +130,19 @@ int case_study_arch(int argc, char **argv) {
 
         double theta = 0.683;
         arma::mat Aq0 = {{ 0.9678 ,     0,    0.0036,        0,    0.0036,         0,    0.0036},
-         {0,    0.9682,         0,   0.0034,         0,    0.0034,    0.0034},
-    {0.0106,         0,    0.9494,         0,         0,         0,         0},
-  {       0,    0.0097,         0,    0.9523,         0,         0,         0},
-  {  0.0106,         0,         0,         0,    0.9494,         0,         0},
-  {       0,    0.0097,         0,         0,         0,    0.9523,         0},
-  {  0.0106,    0.0097,         0,         0,         0,         0,    0.9794}};
+                        {0,    0.9682,         0,   0.0034,         0,    0.0034,    0.0034},
+                    {0.0106,         0,    0.9494,         0,         0,         0,         0},
+                  {       0,    0.0097,         0,    0.9523,         0,         0,         0},
+                  {  0.0106,         0,         0,         0,    0.9494,         0,         0},
+                  {       0,    0.0097,         0,         0,         0,    0.9523,         0},
+                  {  0.0106,    0.0097,         0,         0,         0,         0,    0.9794}};
         arma::vec Bq0 = {{0.0195},
-    {0.0200},
-      {   0.0459},
-        {  0.0425},
-         { 0.0397},
-         { 0.0377},
-         { 0.0109}};
+                         {0.0200},
+                         {0.0459},
+                         {0.0425},
+                         {0.0397},
+                         {0.0377},
+                         {0.0109}};
         arma::mat Gq0 =arma::diagmat(Bq0);
         /* { {      0,         0   , 0.0000,         0   , 0.0019 ,        0,    0.0164},
     {      0,         0  ,       0,    0.0000   ,      0 ,   0.0015  , -0.0018},
@@ -163,7 +167,7 @@ int case_study_arch(int argc, char **argv) {
          {-0.5, 0.5}, {-0.5,0.5}};
           //{-0.5,0.5}};
 
-      //  arma::mat Input = {{18, 19}};
+        //  arma::mat Input = {{18, 19}};
 
         // Define grid type
         // (1 = uniform, 2 = adaptive)
@@ -360,6 +364,7 @@ int case_study_arch(int argc, char **argv) {
            std::cout << "TODO" << std::endl;
         break;
       };
+    
 
   //FIXED POLICY TO BE ALWAYS ON FOR ALL TIME HORIZON
     ssmodels_t model(Aq0,Gq0);
@@ -398,13 +403,15 @@ int case_study_arch(int argc, char **argv) {
     break;
   }
 
-      default: {
-    std::cout << " Invalid case study selection " << std::endl;
-    break;
-  }
-  }
+      default: 
+      {
+        std::cout << " Invalid case study selection " << std::endl;
+        break;
+      }
+    }
+
     // Perform  Task
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "------------Completed -----------"
                 << std::endl;
-  }
+}

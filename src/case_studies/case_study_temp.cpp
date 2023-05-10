@@ -217,7 +217,6 @@ int case_study_arch(int argc, char **argv)
       arma::mat Aq0 = {{0.8192, 0.0341, 0.0126}, {0.0165, 0.9822, 0.0001},{0.0009, 1e-4, 0.9989}};
       arma::mat Gq0 = { {5, 0, 0}, {0 ,5,0 }, {0, 0, 5}};
       arma::vec Qq0 = {{0.0842},{0.0009},{1e-5}};
-  //    Gq0 = Gq0 + arma::diagmat(Qq0.t()*7*10);
       ssmodels_t model(Aq0(arma::span(0,1), arma::span(0,1)),Gq0(arma::span(0,1), arma::span(0,1)));
 
       std::vector<ssmodels_t> models1 = {model};
@@ -266,142 +265,139 @@ int case_study_arch(int argc, char **argv)
         double N_s = 0.1;
         int T = 5;
 
-      int dimension = argc >= 3 ? std::atoi(argv[2]): 2;
+        int dimension = argc >= 3 ? std::atoi(argv[2]): 2;
 
-      arma::mat Aq0 = arma::zeros<arma::mat>(dimension, dimension);
-      arma::vec Bq0 = arma::zeros<arma::mat>(dimension);
-      arma::mat Gq0 = arma::zeros<arma::mat>(dimension, dimension);
+        arma::mat Aq0 = arma::zeros<arma::mat>(dimension, dimension);
+        arma::vec Bq0 = arma::zeros<arma::mat>(dimension);
+        arma::mat Gq0 = arma::zeros<arma::mat>(dimension, dimension);
 
-      arma::mat bound = arma::ones<arma::mat>(dimension,dimension);
-      arma::mat grid = arma::zeros<arma::mat>(1,dimension);
-      arma::mat reft = arma::zeros<arma::mat>(1,dimension);
-      switch (dimension)
-      {
-        case 2:
+        arma::mat bound = arma::ones<arma::mat>(dimension,dimension);
+        arma::mat grid = arma::zeros<arma::mat>(1,dimension);
+        arma::mat reft = arma::zeros<arma::mat>(1,dimension);
+        switch (dimension)
         {
-          Aq0 = {{1, N_s},{0,1}};
-          Bq0 = {{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}};
-          Gq0 = 0.04*arma::eye<arma::mat>(2,2) + arma::diagmat(Bq0);
-          bound = {{-1,1},{-1,1}};
-          grid = {{0.1,0.1}};//,1}};
-          arma::mat reft = {{1,1}};//,1}};
+          case 2:
+          {
+            Aq0 = {{1, N_s},{0,1}};
+            Bq0 = {{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}};
+            Gq0 = 0.04*arma::eye<arma::mat>(2,2) + arma::diagmat(Bq0);
+            bound = {{-1,1},{-1,1}};
+            grid = {{0.1,0.1}};//,1}};
+            arma::mat reft = {{1,1}};//,1}};
 
+            std::cout << "Aq0: " << Aq0 << std::endl;
+            std::cout << "Bq0: " << Bq0 << std::endl;
+            std::cout << "Gq0: " << Gq0 << std::endl;
+            }
+            break;
+          case 3:
+          {
+            Aq0 = {{1, N_s, 0.5*(N_s*N_s)},
+                  {0, 1, N_s},
+                  {0, 0, 1}};
+            Bq0 = {{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
+            Gq0 = 0.04*arma::eye<arma::mat>(3,3)+ arma::diagmat(Bq0);
+            bound = {{-1,1},{-1,1},{-1,1}};
+            grid = {{0.1,0.1,0.1}};//,1}};
+            arma::mat reft = {{1,1,1}};//,1}};
+            std::cout << "Aq0: " << Aq0 << std::endl;
+            std::cout << "Bq0: " << Bq0 << std::endl;
+            std::cout << "Gq0: " << Gq0 << std::endl;
+          }
+          break;
+
+          case 4:
+          {
+            Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6},
+                  {0,1, N_s, 0.5*(N_s*N_s) }, {0, 0, 1, N_s},
+                    {0,0,0,1}};
+            Bq0 = {{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
+            Gq0 = 0.04*arma::eye<arma::mat>(dimension, dimension)+ arma::diagmat(Bq0);
+            bound = {{-1,1},{-1,1},{-1,1},{-1,1}};
+            grid = {{0.1,0.1,0.1,0.1}};//,1}};
+            arma::mat reft = {{1,1,1,1}};//,1}};
+            std::cout << "Aq0: " << Aq0 << std::endl;
+            std::cout << "Bq0: " << Bq0 << std::endl;
+            std::cout << "Gq0: " << Gq0 << std::endl;
+        }
+        break;
+
+          case 5:
+          {
+          Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24 },
+                {0,1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6 }, {0, 0, 1, N_s, 0.5*(N_s*N_s)},
+                  {0,0,0,1,N_s}, {0,0,0,0,1}};
+          Bq0 = {{N_s*N_s*(N_s*N_s*N_s)/120 },{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
+          Gq0 = 0.04*arma::eye<arma::mat>(dimension, dimension)+ arma::diagmat(Bq0);
+          bound = {{-1,1},{-1,1},{-1,1},{-1,1},{-1,1}};
+          grid = {{0.1,0.1,0.1,0.1,0.1}};//,1}};
+          arma::mat reft = {{1,1,1,1,1}};//,1}};
           std::cout << "Aq0: " << Aq0 << std::endl;
           std::cout << "Bq0: " << Bq0 << std::endl;
           std::cout << "Gq0: " << Gq0 << std::endl;
           }
           break;
-        case 3:
-        {
-          Aq0 = {{1, N_s, 0.5*(N_s*N_s)},
-                 {0, 1, N_s},
-                 {0, 0, 1}};
-          Bq0 = {{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
-          Gq0 = 0.04*arma::eye<arma::mat>(3,3)+ arma::diagmat(Bq0);
-          bound = {{-1,1},{-1,1},{-1,1}};
-          grid = {{0.1,0.1,0.1}};//,1}};
-          arma::mat reft = {{1,1,1}};//,1}};
-          std::cout << "Aq0: " << Aq0 << std::endl;
-          std::cout << "Bq0: " << Bq0 << std::endl;
-          std::cout << "Gq0: " << Gq0 << std::endl;
-        }
-        break;
 
-        case 4:
-        {
-          Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6},
-                 {0,1, N_s, 0.5*(N_s*N_s) }, {0, 0, 1, N_s},
-                  {0,0,0,1}};
-          Bq0 = {{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
+          case 7:
+          {
+          Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24, N_s*N_s*(N_s*N_s*N_s)/120 , N_s*N_s*N_s*(N_s*N_s*N_s)/720 },
+                {0,1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24, N_s*N_s*(N_s*N_s*N_s)/120  },
+                  {0, 0, 1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24},
+                  {0, 0, 0,  1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6},
+                  {0, 0, 0,  0,   1, N_s, 0.5*(N_s*N_s)},
+                  {0, 0, 0,  0,   0,  1,  N_s},
+                  {0, 0, 0, 0, 0, 0, 1}};
+
+          Bq0 = { {N_s*N_s*N_s*(N_s*N_s*N_s*N_s)/5040}, { N_s*N_s*N_s*(N_s*N_s*N_s)/720}, {N_s*N_s*(N_s*N_s*N_s)/120 },{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
           Gq0 = 0.04*arma::eye<arma::mat>(dimension, dimension)+ arma::diagmat(Bq0);
-          bound = {{-1,1},{-1,1},{-1,1},{-1,1}};
-          grid = {{0.1,0.1,0.1,0.1}};//,1}};
-          arma::mat reft = {{1,1,1,1}};//,1}};
+          bound = {{-1,1},{-1,1},{-1,1},{-1,1},{-1,1},{-1,1},{-1,1}};
+          grid = {{0.1,0.1,0.1,0.1,0.1,0.1,0.1}};//,1}};
+          arma::mat reft = {{1,1,1,1,1,1,1}};//,1}};
           std::cout << "Aq0: " << Aq0 << std::endl;
           std::cout << "Bq0: " << Bq0 << std::endl;
           std::cout << "Gq0: " << Gq0 << std::endl;
-       }
-       break;
+          }
+          break;
 
-        case 5:
-        {
-        Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24 },
-               {0,1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6 }, {0, 0, 1, N_s, 0.5*(N_s*N_s)},
-                {0,0,0,1,N_s}, {0,0,0,0,1}};
-        Bq0 = {{N_s*N_s*(N_s*N_s*N_s)/120 },{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
-        Gq0 = 0.04*arma::eye<arma::mat>(dimension, dimension)+ arma::diagmat(Bq0);
-        bound = {{-1,1},{-1,1},{-1,1},{-1,1},{-1,1}};
-        grid = {{0.1,0.1,0.1,0.1,0.1}};//,1}};
-        arma::mat reft = {{1,1,1,1,1}};//,1}};
-        std::cout << "Aq0: " << Aq0 << std::endl;
-        std::cout << "Bq0: " << Bq0 << std::endl;
-        std::cout << "Gq0: " << Gq0 << std::endl;
-        }
+          default:
+            std::cout << "TODO" << std::endl;
+          break;
+        };
+      
+
+        //FIXED POLICY TO BE ALWAYS ON FOR ALL TIME HORIZON
+        ssmodels_t model(Aq0,Gq0);
+
+        std::vector<ssmodels_t> models1 = {model};
+        shs_t<arma::mat,int> cs1SHS(models1);
+
+
+
+        // Define grid type
+        // (1 = uniform, 2 = adaptive)
+        // For comparison with IMDP we use uniform grid
+        int gridType = 1;
+
+        // Time horizon
+        int K = 6;
+
+        // Library (1 = simulator, 2 = faust^2, 3 = imdp)
+        int lb = 2;
+
+        // Property type
+        // (1 = verify safety, 2= verify reach-avoid, 3 = safety synthesis, 4 = reach-avoid synthesis)
+        int p = 1;
+
+        // Task specification
+        taskSpec_t cs1SpecFAUST(3, K, 1, bound, grid, reft);
+
+        // Combine model and associated task
+        inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
+
+            // Perform  Task
+        performTask(cs1InputFAUST);
         break;
-
-        case 7:
-        {
-        Aq0 = {{1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24, N_s*N_s*(N_s*N_s*N_s)/120 , N_s*N_s*N_s*(N_s*N_s*N_s)/720 },
-               {0,1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24, N_s*N_s*(N_s*N_s*N_s)/120  },
-                {0, 0, 1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6, N_s*N_s*(N_s*N_s)/24},
-                {0, 0, 0,  1, N_s, 0.5*(N_s*N_s), N_s*(N_s*N_s)/6},
-                {0, 0, 0,  0,   1, N_s, 0.5*(N_s*N_s)},
-                {0, 0, 0,  0,   0,  1,  N_s},
-                {0, 0, 0, 0, 0, 0, 1}};
-
-        Bq0 = { {N_s*N_s*N_s*(N_s*N_s*N_s*N_s)/5040}, { N_s*N_s*N_s*(N_s*N_s*N_s)/720}, {N_s*N_s*(N_s*N_s*N_s)/120 },{N_s*N_s*(N_s*N_s)/24 },{N_s*(N_s*N_s)/6 }, {(N_s*N_s)/2}, {N_s}};
-        Gq0 = 0.04*arma::eye<arma::mat>(dimension, dimension)+ arma::diagmat(Bq0);
-        bound = {{-1,1},{-1,1},{-1,1},{-1,1},{-1,1},{-1,1},{-1,1}};
-        grid = {{0.1,0.1,0.1,0.1,0.1,0.1,0.1}};//,1}};
-        arma::mat reft = {{1,1,1,1,1,1,1}};//,1}};
-        std::cout << "Aq0: " << Aq0 << std::endl;
-        std::cout << "Bq0: " << Bq0 << std::endl;
-        std::cout << "Gq0: " << Gq0 << std::endl;
-        }
-        break;
-
-        default:
-           std::cout << "TODO" << std::endl;
-        break;
-      };
-    
-
-  //FIXED POLICY TO BE ALWAYS ON FOR ALL TIME HORIZON
-    ssmodels_t model(Aq0,Gq0);
-
-    std::vector<ssmodels_t> models1 = {model};
-    shs_t<arma::mat,int> cs1SHS(models1);
-
-
-
-    // Define grid type
-    // (1 = uniform, 2 = adaptive)
-    // For comparison with IMDP we use uniform grid
-    int gridType = 1;
-
-    // Time horizon
-    int K = 6;
-
-    // Library (1 = simulator, 2 = faust^2, 3 = imdp)
-    int lb = 2;
-
-    // Property type
-    // (1 = verify safety, 2= verify reach-avoid, 3 = safety synthesis, 4 = reach-avoid synthesis)
-    int p = 1;
-
-    // Task specification
-    taskSpec_t cs1SpecFAUST(3, K, 1, bound, grid, reft);
-
-    // Combine model and associated task
-    inputSpec_t<arma::mat, int> cs1InputFAUST(cs1SHS, cs1SpecFAUST);
-
-        // Perform  Task
-    performTask(cs1InputFAUST);
-
-
-
-    break;
-  }
+      }
 
       default: 
       {
@@ -414,4 +410,5 @@ int case_study_arch(int argc, char **argv)
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "------------Completed -----------"
                 << std::endl;
-}
+    return 0;
+  }
